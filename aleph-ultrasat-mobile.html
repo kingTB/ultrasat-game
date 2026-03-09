@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>משימת אולטראסאט - האקדמיה לאסטרופיזיקה</title>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #8b5cf6; /* UV Purple */
+            --primary-dark: #6d28d9;
+            --secondary: #0ea5e9; /* Sky Blue */
+            --accent: #f59e0b; /* Gold/Warning */
+            --success: #10b981;
+            --danger: #ef4444;
+            --bg-space: #0f172a;
+            --bg-panel: #1e293b;
+            --text-light: #f8fafc;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Heebo', sans-serif; }
+
+        body {
+            background-color: var(--bg-space);
+            color: var(--text-light);
+            height: 100vh; width: 100vw;
+            overflow: hidden; display: flex; flex-direction: column;
+        }
+
+        /* --- Header --- */
+        header {
+            height: 60px; flex-shrink: 0;
+            background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px);
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 20px; border-bottom: 2px solid var(--primary);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 100;
+        }
+        .header-title { font-size: 1.5rem; font-weight: 900; color: var(--secondary); display: flex; align-items: center; gap: 10px; }
+        .stats { display: flex; gap: 15px; align-items: center; }
+        .score-box { background: rgba(245, 158, 11, 0.2); border: 2px solid var(--accent); color: var(--accent); padding: 5px 15px; border-radius: 20px; font-weight: 900; }
+        .btn-menu, .btn-nikud { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 6px 12px; border-radius: 20px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-menu:hover, .btn-nikud:hover { background: rgba(255,255,255,0.2); }
+
+        /* --- Main Layout --- */
+        main { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        
+        #canvas-wrapper { flex: 1.5; min-height: 40vh; position: relative; background: radial-gradient(circle at center, #1e293b, #020617); }
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; touch-action: none; }
+
+        #canvas-overlay {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 80vmin; height: 80vmin; max-width: 300px; max-height: 300px;
+            pointer-events: none; z-index: 5; display: flex; justify-content: center; align-items: center;
+        }
+
+        #ui-panel {
+            flex: 1; background: var(--bg-panel); border-top: 3px solid var(--primary);
+            display: flex; flex-direction: column; padding: 20px; overflow-y: auto;
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.5); z-index: 10;
+        }
+
+        /* --- UI Elements --- */
+        .mission-title { font-size: 1.8rem; font-weight: 900; color: var(--primary); margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        .dialogue-box {
+            font-size: 1.2rem; line-height: 1.5; color: #cbd5e1; margin-bottom: 20px; flex-shrink: 0;
+            background: rgba(0,0,0,0.3); padding: 15px; border-radius: 15px; border-right: 4px solid var(--secondary);
+            min-height: 80px;
+        }
+        .highlight { color: var(--accent); font-weight: 900; }
+
+        .controls-container { display: flex; flex-direction: column; gap: 15px; flex-shrink: 0; }
+        #next-level-wrap { margin-top: 15px; display: flex; flex-direction: column; gap: 10px; }
+        
+        button.btn-action {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white;
+            border: none; padding: 15px; font-size: 1.3rem; font-weight: 900; border-radius: 15px; cursor: pointer;
+            box-shadow: 0 6px 0 #4c1d95, 0 10px 20px rgba(0,0,0,0.3); transition: all 0.1s; text-align: center; width: 100%;
+        }
+        button.btn-action:active { transform: translateY(6px); box-shadow: 0 0 0 #4c1d95; }
+        button.btn-success { background: linear-gradient(135deg, var(--success), #047857); box-shadow: 0 6px 0 #064e3b; }
+        button.btn-success:active { box-shadow: 0 0 0 #064e3b; }
+        
+        .slider-group { background: rgba(0,0,0,0.4); padding: 15px; border-radius: 15px; text-align: center; position: relative;}
+        .slider-group label { display: block; font-size: 1.1rem; font-weight: bold; margin-bottom: 10px; color: var(--secondary); }
+        
+        /* Spectrum Slider Custom - ACCURATE NON-VISIBLE BLACK BANDS */
+        .spectrum-slider { 
+            -webkit-appearance: none; width: 100%; height: 15px; border-radius: 10px; 
+            background: linear-gradient(to right, 
+                #111827 0%, #111827 45%, 
+                #ef4444 45%, #f59e0b 50%, #10b981 55%, #0ea5e9 60%, #8b5cf6 65%, 
+                #111827 65%, #111827 100%); 
+            outline: none; margin-bottom: 25px; border: 1px solid #334155;
+        }
+        .spectrum-slider::-webkit-slider-thumb { -webkit-appearance: none; height: 30px; width: 30px; border-radius: 50%; background: white; border: 4px solid var(--bg-panel); cursor: pointer; box-shadow: 0 0 10px rgba(255,255,255,0.5); }
+        
+        .ticks-container { display: flex; justify-content: space-between; position: absolute; bottom: 5px; left: 15px; right: 15px; font-size: 0.8rem; font-weight: bold; color: #94a3b8; direction: ltr;}
+        .tick { display: flex; flex-direction: column; align-items: center; position: absolute; transform: translateX(-50%);}
+        .tick::before { content: ''; height: 8px; width: 2px; background: #cbd5e1; margin-bottom: 2px;}
+
+        input[type=range]:not(.spectrum-slider) { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]:not(.spectrum-slider)::-webkit-slider-runnable-track { width: 100%; height: 10px; background: #334155; border-radius: 5px; }
+        input[type=range]:not(.spectrum-slider)::-webkit-slider-thumb { -webkit-appearance: none; height: 24px; width: 24px; border-radius: 50%; background: var(--secondary); margin-top: -7px; box-shadow: 0 0 10px var(--secondary); cursor: pointer; }
+
+        .info-box { background: rgba(14, 165, 233, 0.1); border: 1px solid var(--secondary); padding: 10px; border-radius: 10px; font-size: 1rem; color: #e0f2fe; margin-top: 10px; min-height: 60px; display: flex; align-items: center; justify-content: center; text-align: center;}
+
+        /* Progress Bar */
+        .progress-wrap { margin-top: 10px; }
+        .progress-label { text-align: center; font-weight: bold; margin-bottom: 5px; color: #94a3b8; }
+        .progress-bar-bg { width: 100%; height: 15px; background: #0f172a; border-radius: 10px; overflow: hidden; border: 1px solid #334155; }
+        .progress-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--primary), var(--secondary)); transition: width 0.2s; }
+
+        /* Quiz UI */
+        .quiz-container { display: flex; flex-direction: column; gap: 15px; align-items: center; width: 100%; opacity: 1; transition: opacity 0.5s ease; }
+        .quiz-container.fade-out { opacity: 0; }
+        .quiz-btn { width: 100%; background: #334155; color: white; border: 2px solid #475569; padding: 12px; font-size: 1.1rem; border-radius: 10px; cursor: pointer; text-align: right; transition: 0.2s; font-weight: bold; display: flex; align-items: center; gap: 10px; }
+        .quiz-btn:hover { background: #475569; border-color: var(--secondary); }
+        .quiz-btn svg { width: 24px; height: 24px; flex-shrink: 0; }
+
+        /* Animations */
+        .slow-mo-float { animation: slowFloat 6s ease-in-out infinite; }
+        @keyframes slowFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+        
+        .slow-spin { transform-origin: center; animation: slowSpin 20s linear infinite; }
+        @keyframes slowSpin { 100% { transform: rotate(360deg); } }
+
+        .slow-pulse { animation: slowPulse 4s ease-in-out infinite; }
+        @keyframes slowPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.7; } }
+
+        /* --- Overlays --- */
+        .overlay {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 200; text-align: center; padding: 20px; overflow-y: auto;
+        }
+        .hidden { display: none !important; }
+
+        /* Level Menu */
+        .level-grid { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; max-width: 800px; margin: 30px 0; width: 100%; }
+        .level-card {
+            background: rgba(255,255,255,0.05); border: 2px solid var(--primary); border-radius: 15px;
+            padding: 15px; width: 140px; cursor: pointer; transition: 0.2s;
+            display: flex; flex-direction: column; align-items: center; gap: 10px;
+        }
+        .level-card:hover { background: var(--primary); transform: translateY(-5px); }
+        .level-card svg { width: 50px; height: 50px; }
+        .level-card .lvl-num { font-size: 0.9rem; color: #cbd5e1; }
+        .level-card .lvl-name { font-weight: bold; font-size: 1rem; line-height: 1.2; text-align:center; }
+        .locked { opacity: 0.5; filter: grayscale(1); pointer-events: none; border-color: #475569; }
+
+        .msg-title { font-size: 3.5rem; color: var(--secondary); margin-bottom: 10px; text-shadow: 0 0 20px var(--secondary); }
+        .msg-desc { font-size: 1.5rem; max-width: 600px; margin-bottom: 30px; line-height: 1.4; }
+
+        /* --- Responsive Adjustments --- */
+        @media (min-aspect-ratio: 4/3) { 
+            main { flex-direction: row; }
+            #canvas-wrapper { flex: 2; height: 100%; }
+            #ui-panel { flex: 1; max-width: 450px; height: 100%; border-top: none; border-right: 3px solid var(--primary); box-shadow: -10px 0 30px rgba(0,0,0,0.5); }
+        }
+
+        @media (max-width: 768px) {
+            header { padding: 0 10px; height: 55px; }
+            .header-title { font-size: 1.2rem; gap: 5px; }
+            .header-title svg { width: 24px; height: 24px; }
+            .stats { gap: 8px; }
+            .btn-menu, .btn-nikud { padding: 5px 8px; font-size: 0.85rem; }
+            .score-box { padding: 5px 10px; font-size: 0.9rem; }
+            
+            #canvas-wrapper { flex: none; height: 45vh; min-height: unset; }
+            #ui-panel { padding: 15px; padding-bottom: 30px; border-top-width: 2px; }
+            
+            .mission-title { font-size: 1.4rem; margin-bottom: 5px; }
+            .dialogue-box { font-size: 1.05rem; padding: 12px; margin-bottom: 15px; min-height: 60px; }
+            
+            .msg-title { font-size: 2.2rem; }
+            .msg-desc { font-size: 1.1rem; margin-bottom: 20px; }
+            #msg-icon { font-size: 4rem; margin-bottom: 10px; }
+            #btn-msg-action { padding: 15px; font-size: 1.4rem; width: 90%; max-width: 300px; }
+            
+            .level-grid { gap: 10px; }
+            .level-card { width: calc(50% - 10px); max-width: 140px; padding: 10px; }
+            .level-card svg { width: 40px; height: 40px; }
+            
+            button.btn-action { font-size: 1.15rem; padding: 12px; }
+            
+            .spectrum-slider { height: 12px; margin-bottom: 20px; }
+            .spectrum-slider::-webkit-slider-thumb { height: 24px; width: 24px; }
+            .ticks-container { font-size: 0.65rem; bottom: 8px; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title">
+            <svg viewBox="0 0 24 24" width="30" height="30" fill="var(--secondary)"><path d="M12 2L2 22h20L12 2zm0 4.5l6.5 13.5h-13L12 6.5z"/></svg>
+            <span id="header-text">אולטראסאט</span>
+        </div>
+        <div class="stats">
+            <button class="btn-nikud" id="btn-nikud">ניקוד: ✓</button>
+            <button class="btn-menu" id="btn-menu">☰ שלבים</button>
+            <div class="score-box">⭐ <span id="score-display">0</span></div>
+        </div>
+    </header>
+
+    <main>
+        <div id="canvas-wrapper">
+            <canvas id="game-canvas"></canvas>
+            <div id="canvas-overlay"></div>
+        </div>
+        <div id="ui-panel">
+            <div class="mission-title" id="ui-title"></div>
+            <div class="dialogue-box" id="ui-desc"></div>
+            <div class="controls-container" id="ui-controls"></div>
+            <div id="next-level-wrap" class="hidden"></div>
+            
+            <div class="progress-wrap hidden" id="ui-progress">
+                <div class="progress-label" id="prog-label">מתקדם...</div>
+                <div class="progress-bar-bg"><div class="progress-bar-fill" id="prog-fill"></div></div>
+            </div>
+        </div>
+    </main>
+
+    <div id="menu-overlay" class="overlay hidden">
+        <h2 style="font-size: 3rem; color: white;">בחירת משימה</h2>
+        <div class="level-grid" id="level-grid"></div>
+        <button class="btn-action" id="btn-close-menu" style="width: 200px;">חזור</button>
+    </div>
+
+    <div id="msg-overlay" class="overlay">
+        <div id="msg-icon" class="slow-mo-float">🛰️</div>
+        <h1 class="msg-title" id="msg-title">פרויקט אולטראסאט</h1>
+        <p class="msg-desc" id="msg-desc">הצטרפו לצוות המדענים! נחקור סופרנובות, כוכבי נייטרונים וחורים שחורים בעזרת טלסקופ ה-UV הישראלי.</p>
+        <button class="btn-action btn-success" id="btn-msg-action">התחל מסע!</button>
+    </div>
+
+<script>
+/** Audio System */
+const AudioSys = {
+    ctx: null,
+    init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); if (this.ctx.state === 'suspended') this.ctx.resume(); },
+    play(freq, type, dur, vol) {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+        osc.type = type; osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        gain.gain.setValueAtTime(vol, this.ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + dur);
+        osc.connect(gain); gain.connect(this.ctx.destination); osc.start(); osc.stop(this.ctx.currentTime + dur);
+    },
+    click() { this.init(); this.play(800, 'sine', 0.05, 0.1); },
+    success() { this.init(); this.play(523, 'sine', 0.1, 0.1); setTimeout(() => this.play(659, 'sine', 0.1, 0.1), 100); setTimeout(() => this.play(783, 'sine', 0.3, 0.1), 200); },
+    error() { this.init(); this.play(200, 'sawtooth', 0.3, 0.1); setTimeout(() => this.play(150, 'sawtooth', 0.4, 0.1), 150); },
+    blip() { this.init(); this.play(1200, 'square', 0.05, 0.05); },
+    collect() { this.init(); this.play(1500, 'sine', 0.1, 0.05); setTimeout(() => this.play(2000, 'sine', 0.15, 0.05), 50); },
+    boom() {
+        this.init(); const bufSize = this.ctx.sampleRate * 2; const buf = this.ctx.createBuffer(1, bufSize, this.ctx.sampleRate); const data = buf.getChannelData(0);
+        for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+        const noise = this.ctx.createBufferSource(); noise.buffer = buf;
+        const filter = this.ctx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.setValueAtTime(1000, this.ctx.currentTime); filter.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 1.5);
+        const gain = this.ctx.createGain(); gain.gain.setValueAtTime(0.5, this.ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 1.5);
+        noise.connect(filter); filter.connect(gain); gain.connect(this.ctx.destination); noise.start();
+    }
+};
+
+/** SVGs for icons and Quiz */
+const SVGS = {
+    spectrum: `<svg viewBox="0 0 100 100"><defs><linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#111827" /><stop offset="45%" style="stop-color:#111827" /><stop offset="45%" style="stop-color:#ef4444" /><stop offset="55%" style="stop-color:#10b981" /><stop offset="65%" style="stop-color:#8b5cf6" /><stop offset="65%" style="stop-color:#111827" /><stop offset="100%" style="stop-color:#111827" /></linearGradient></defs><rect x="10" y="40" width="80" height="20" rx="10" fill="url(#grad1)"/><path d="M10 50 Q30 20 50 50 T90 50" fill="none" stroke="white" stroke-width="3" opacity="0.8"/></svg>`,
+    earth: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#0ea5e9"/><path d="M20 50 Q40 20 60 40 T90 50 Q70 80 40 70 T20 50" fill="#10b981"/></svg>`,
+    fov: `<svg viewBox="0 0 100 100"><path d="M50 80 L10 20 A50 50 0 0 1 90 20 Z" fill="rgba(139, 92, 246, 0.5)" stroke="#8b5cf6" stroke-width="4"/><circle cx="50" cy="80" r="10" fill="#cbd5e1"/></svg>`,
+    filter: `<svg viewBox="0 0 100 100"><circle cx="30" cy="50" r="15" fill="#ef4444"/><circle cx="70" cy="30" r="15" fill="#8b5cf6"/><circle cx="60" cy="70" r="10" fill="#f59e0b"/></svg>`,
+    shock: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="30" fill="#38bdf8"/><path d="M50 10 L50 90 M10 50 L90 50 M20 20 L80 80 M20 80 L80 20" stroke="white" stroke-width="4"/></svg>`,
+    neutron: `<svg viewBox="0 0 100 100"><circle cx="35" cy="50" r="15" fill="#e0f2fe"/><circle cx="65" cy="50" r="15" fill="#e0f2fe"/><path d="M35 50 Q50 30 65 50" fill="none" stroke="#f59e0b" stroke-width="4" stroke-dasharray="5 5"/></svg>`,
+    blackhole: `<svg viewBox="0 0 100 100"><ellipse cx="50" cy="50" rx="40" ry="15" fill="#f59e0b" opacity="0.8"/><circle cx="50" cy="50" r="20" fill="black" stroke="#ea580c" stroke-width="2"/></svg>`,
+    alert: `<svg viewBox="0 0 100 100"><path d="M30 70 L50 30 L70 70" fill="none" stroke="#94a3b8" stroke-width="6"/><circle cx="50" cy="30" r="10" fill="#ef4444"/><path d="M30 20 Q50 0 70 20" fill="none" stroke="#38bdf8" stroke-width="4"/></svg>`,
+    quiz: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="none" stroke="#10b981" stroke-width="8"/><path d="M50 25 Q65 25 65 40 Q65 55 50 60 L50 70" fill="none" stroke="#10b981" stroke-width="8" stroke-linecap="round"/><circle cx="50" cy="85" r="5" fill="#10b981"/></svg>`,
+    // Extended Quiz SVGs with CSS animations
+    quiz_orbit: `<svg viewBox="0 0 100 100" style="width:100%; height:100%;"><circle cx="50" cy="50" r="25" fill="#0369a1" class="slow-pulse"/><g class="slow-spin"><circle cx="50" cy="50" r="40" fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="4 4"/><rect x="85" y="45" width="10" height="10" fill="#cbd5e1"/></g></svg>`,
+    quiz_fov: `<svg viewBox="0 0 100 100" style="width:100%; height:100%;" class="slow-mo-float"><path d="M50 90 L0 10 L100 10 Z" fill="rgba(139, 92, 246, 0.4)" stroke="#8b5cf6" stroke-width="2" class="slow-pulse"/><circle cx="50" cy="90" r="8" fill="white"/><circle cx="30" cy="30" r="5" fill="#f59e0b"/><circle cx="70" cy="40" r="4" fill="#38bdf8"/><circle cx="50" cy="20" r="6" fill="#ef4444"/></svg>`,
+    quiz_gold: `<svg viewBox="0 0 100 100" style="width:100%; height:100%;"><g class="slow-spin"><circle cx="35" cy="50" r="15" fill="#e0f2fe"/><circle cx="65" cy="50" r="15" fill="#e0f2fe"/></g><circle cx="50" cy="50" r="6" fill="#f59e0b" class="slow-pulse"/></svg>`
+};
+
+/** State & Config */
+const State = {
+    lvl: 0, score: 0, useNikud: true, maxUnlocked: 0, isCompleted: false,
+    getT(obj) { return obj ? (this.useNikud ? obj.n : obj.p) : ''; }
+};
+
+const DOM = {
+    canvas: document.getElementById('game-canvas'), ctx: document.getElementById('game-canvas').getContext('2d'),
+    title: document.getElementById('ui-title'), desc: document.getElementById('ui-desc'),
+    controls: document.getElementById('ui-controls'), 
+    nextLevelWrap: document.getElementById('next-level-wrap'),
+    progWrap: document.getElementById('ui-progress'), progLabel: document.getElementById('prog-label'), progFill: document.getElementById('prog-fill'),
+    score: document.getElementById('score-display'), nikudBtn: document.getElementById('btn-nikud'),
+    menuBtn: document.getElementById('btn-menu'), menuOverlay: document.getElementById('menu-overlay'),
+    levelGrid: document.getElementById('level-grid'), msgOverlay: document.getElementById('msg-overlay'),
+    msgTitle: document.getElementById('msg-title'), msgDesc: document.getElementById('msg-desc'),
+    msgBtn: document.getElementById('btn-msg-action'), btnCloseMenu: document.getElementById('btn-close-menu')
+};
+
+let CtxObj = { particles: [], stars: [], vw: 0, vh: 0 };
+let currentLevelLogic = null;
+let animFrame = null;
+
+function resize() {
+    DOM.canvas.width = document.getElementById('canvas-wrapper').clientWidth;
+    DOM.canvas.height = document.getElementById('canvas-wrapper').clientHeight;
+    CtxObj.vw = DOM.canvas.width; CtxObj.vh = DOM.canvas.height;
+    if (CtxObj.stars.length === 0) {
+        for(let i=0; i<150; i++) CtxObj.stars.push({ x: Math.random()*2000, y: Math.random()*2000, size: Math.random()*2, blink: Math.random()*0.05 });
+    }
+}
+window.addEventListener('resize', resize);
+
+/** Particles Helper */
+function spawnParticles(x, y, color, count, type='circle') {
+    for(let i=0; i<count; i++) {
+        let speed = (type === 'gold' || type === 'slow-confetti') ? 2 : 15;
+        CtxObj.particles.push({ x, y, vx: (Math.random()-0.5)*speed, vy: (Math.random()-0.5)*speed, color, life: 1.0, size: Math.random()*6+2, type });
+    }
+}
+function drawParticles(ctx) {
+    for(let i=CtxObj.particles.length-1; i>=0; i--) {
+        let p = CtxObj.particles[i];
+        p.x += p.vx; p.y += p.vy;
+        if(p.type === 'confetti') p.vy += 0.2; 
+        if(p.type === 'slow-confetti') p.vy += 0.05; 
+        if(p.type === 'gold') p.vy += 0.01; 
+        p.life -= (p.type==='gold' || p.type==='slow-confetti') ? 0.005 : 0.02;
+        
+        ctx.save(); ctx.globalAlpha = Math.max(0, p.life); ctx.translate(p.x, p.y);
+        ctx.fillStyle = p.color;
+        if (p.type === 'circle') { ctx.beginPath(); ctx.arc(0,0, p.size, 0, Math.PI*2); ctx.fill(); }
+        else if (p.type === 'gold') { ctx.font = "bold 16px Arial"; ctx.fillText("Au", 0,0); }
+        else { ctx.rotate(p.life*10); ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size); }
+        ctx.restore();
+        if(p.life <= 0) CtxObj.particles.splice(i, 1);
+    }
+}
+
+/** Telescope Drawer on Canvas */
+function drawTelescope(ctx, type, x, y, scale=1) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(scale, scale);
+    if(type === 'alma') {
+        ctx.fillStyle = "#cbd5e1"; ctx.beginPath(); ctx.arc(0, -10, 30, 0, Math.PI, true); ctx.fill();
+        ctx.fillRect(-5, 0, 10, 30);
+        ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(0, -15, 5, 0, Math.PI*2); ctx.fill();
+    } else if(type === 'webb') {
+        ctx.fillStyle = "#f8fafc"; ctx.beginPath(); ctx.ellipse(0, 20, 50, 10, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = "#fbbf24"; ctx.strokeStyle = "#b45309"; ctx.lineWidth = 1;
+        const hex = (hx, hy) => { ctx.beginPath(); for(let i=0;i<6;i++) { ctx.lineTo(hx + 12*Math.cos(i*Math.PI/3), hy + 12*Math.sin(i*Math.PI/3)); } ctx.closePath(); ctx.fill(); ctx.stroke(); };
+        hex(0, -10); hex(0, -31); hex(0, 11); hex(-18, -20); hex(-18, 1); hex(18, -20); hex(18, 1);
+    } else if(type === 'hubble') {
+        ctx.fillStyle = "#94a3b8"; ctx.fillRect(-15, -35, 30, 70);
+        ctx.fillStyle = "#38bdf8"; ctx.fillRect(-65, -10, 50, 20); ctx.fillRect(15, -10, 50, 20);
+        ctx.fillStyle = "black"; ctx.fillRect(-10, -35, 20, 10);
+    } else if(type === 'chandra') {
+        ctx.fillStyle = "#cbd5e1"; ctx.fillRect(-10, -40, 20, 80);
+        ctx.fillStyle = "#1e40af";
+        ctx.save(); ctx.translate(-10, 0); ctx.rotate(Math.PI/8); ctx.fillRect(-40, -10, 40, 20); ctx.restore();
+        ctx.save(); ctx.translate(10, 0); ctx.rotate(-Math.PI/8); ctx.fillRect(0, -10, 40, 20); ctx.restore();
+    } else if(type === 'ultrasat') {
+        drawSat(ctx, 0, 0, 1, 0);
+    }
+    ctx.restore();
+}
+
+function drawSat(ctx, x, y, scale = 1, fovAngle = 0) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(scale, scale);
+    ctx.fillStyle = "#1e40af"; ctx.strokeStyle = "#60a5fa"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(-70, -10, 40, 20, 2); ctx.fill(); ctx.stroke(); 
+    ctx.beginPath(); ctx.roundRect(30, -10, 40, 20, 2); ctx.fill(); ctx.stroke(); 
+    ctx.fillStyle = "#cbd5e1"; ctx.fillRect(-20, -20, 40, 40); ctx.strokeRect(-20, -20, 40, 40); 
+    ctx.fillStyle = "#38bdf8"; ctx.beginPath(); ctx.arc(0, -20, 15, Math.PI, 0); ctx.fill(); ctx.stroke(); 
+    if(fovAngle > 0) {
+        ctx.fillStyle = "rgba(139, 92, 246, 0.2)"; ctx.beginPath(); ctx.moveTo(0, -20);
+        let rad = fovAngle * Math.PI / 180;
+        ctx.lineTo(-Math.sin(rad)*400, -20 - Math.cos(rad)*400); ctx.arc(0, -20, 400, -Math.PI/2 - rad, -Math.PI/2 + rad); ctx.lineTo(0, -20); ctx.fill();
+    }
+    ctx.restore();
+}
+
+/** Level Data & Logic */
+const Levels = [
+    {   // Level 0: The Spectrum 
+        id: 0, icon: SVGS.spectrum, title: {p: "ספקטרום האור", n: "סְפֶּקְטְרוּם הָאוֹר"},
+        desc: {p: "אסטרופיזיקאים חוקרים את היקום דרך סוגי אור שונים (אורכי גל). העבירו את הסליידר וראו אילו טלסקופים חוקרים אילו תדרים, עד שתגיעו לתחום ה-UV של אולטראסאט!", n: "אַסְטְרוֹפִיזִיקָאִים חוֹקְרִים אֶת הַיְּקוּם דֶּרֶךְ סוּגֵי אוֹר שׁוֹנִים (אָרְכֵּי גַּל). הַעֲבִירוּ אֶת הַסְלַיְדֶר וּרְאוּ אֵילּוּ טֶלֶסְקוֹפִּים חוֹקְרִים אֵילּוּ תְּדָרִים, עַד שֶׁתַּגִּיעוּ לִתְחוּם הַ-UV שֶׁל אוּלְטְרָאסָאט!"},
+        state: { val: 0, activeScope: 'alma',
+                 bands: [
+                    { min: 0, max: 20, name: {p:"רדיו / מיקרוגל (ALMA)",n:"רַדְיוֹ / מִיקְרוֹגַל (ALMA)"}, desc: {p:"גלים ארוכים מאוד, בלתי נראים. מאפשרים לראות גזים קרים ולידת כוכבים.",n:"גַּלִּים אֲרֻכִּים מְאֹד, בִּלְתִּי נִרְאִים. מְאַפְשְׁרִים לִרְאוֹת גַּזִּים קָרִים וְלֵידַת כּוֹכָבִים."} },
+                    { min: 20, max: 45, name: {p:"אינפרא-אדום (Webb)",n:"אִינְפְרָא-אָדֹם (Webb)"}, desc: {p:"בלתי נראה לעין האנושית. טלסקופ ג'יימס ווב מביט מבעד לאבק ורואה גלקסיות עתיקות.",n:"בִּלְתִּי נִרְאֶה לָעַיִן הָאֱנוֹשִׁית. טֶלֶסְקוֹפּ גֵ'יְימְס וֶוּב מַבִּיט מִבַּעַד לְאָבָק וְרוֹאֶה גָּלַקְסְיוֹת עַתִּיקוֹת."} },
+                    { min: 45, max: 65, name: {p:"אור נראה (Hubble)",n:"אוֹר נִרְאֶה (Hubble)"}, desc: {p:"האבל מצלם את היקום בצבעים היחידים שהעיניים שלנו באמת מסוגלות לראות.",n:"הַאבְּל מְצַלֵּם אֶת הַיְּקוּם בַּצְּבָעִים הַיְחִידִים שֶׁהָעֵינַיִם שֶׁלָּנוּ בֶּאֱמֶת מְסֻגָּלוֹת לִרְאוֹת."} },
+                    { min: 65, max: 85, name: {p:"על-סגול (ULTRASAT)",n:"עַל-סָגוֹל (ULTRASAT)"}, desc: {p:"אור קצר, אנרגטי ובלתי נראה! פולטים אותו כוכבים שמתפוצצים. אולטראסאט יחקור כאן.",n:"אוֹר קָצָר, אֶנֶרְגֵּטִי וּבִלְתִּי נִרְאֶה! פּוֹלְטִים אוֹתוֹ כּוֹכָבִים שֶׁמִּתְפּוֹצְצִים. אוּלְטְרָאסָאט יַחְקֹר כָּאן."} },
+                    { min: 85, max: 100, name: {p:"רנטגן וגמא (Chandra)",n:"רֶנְטְגֶּן וְגַמָּא (Chandra)"}, desc: {p:"קרניים בלתי נראות וקטלניות. אנרגיות קיצוניות מאוד סביב חורים שחורים.",n:"קַרְנַיִם בִּלְתִּי נִרְאוֹת וְקַטְלָנִיּוֹת. אֶנֶרְגְּיוֹת קִיצוֹנִיּוֹת מְאֹד סְבִיב חוֹרִים שְׁחֹרִים."} }
+                 ]
+        },
+        init: function() { this.state.val = 0; },
+        ui: function(container) {
+            let div = document.createElement('div'); div.className = 'slider-group'; div.style.width = '100%';
+            div.innerHTML = `
+                <label>${State.getT({p:"אורך גל (ספקטרום)",n:"אֹרֶךְ גַּל (סְפֶּקְטְרוּם)"})}</label>
+                <input type="range" class="spectrum-slider" id="m0-slider" min="0" max="100" value="0" dir="ltr">
+                <div class="ticks-container">
+                    <div class="tick" style="left: 10%">ALMA</div>
+                    <div class="tick" style="left: 32.5%">Webb</div>
+                    <div class="tick" style="left: 55%">Hubble</div>
+                    <div class="tick" style="left: 75%; color: var(--primary);">ULTRASAT</div>
+                    <div class="tick" style="left: 92.5%">Chandra</div>
+                </div>
+            `;
+            let infoBox = document.createElement('div'); infoBox.className = 'info-box'; infoBox.id = "m0-info";
+            container.appendChild(div); container.appendChild(infoBox);
+            
+            let updateInfo = (v) => {
+                let band = this.state.bands.find(b => v >= b.min && v <= b.max);
+                if(band) infoBox.innerHTML = `<strong>${State.getT(band.name)}:</strong><br>${State.getT(band.desc)}`;
+                
+                if(v <= 20) this.state.activeScope = 'alma';
+                else if(v <= 45) this.state.activeScope = 'webb';
+                else if(v <= 65) this.state.activeScope = 'hubble';
+                else if(v <= 85) this.state.activeScope = 'ultrasat';
+                else this.state.activeScope = 'chandra';
+
+                if(v >= 65 && v <= 85 && !State.isCompleted) {
+                    setTimeout(()=> { 
+                        if(!State.isCompleted) levelComplete({p:"מעולה! הגעתם לתחום העל-סגול (UV). בתחום זה אולטראסאט יגלה לנו יקום סוער ודינמי שאי אפשר לראות מהקרקע. המשיכו לחקור את הסליידר או המשיכו הלאה.",n:"מְעֻלֶּה! הִגַּעְתֶּם לִתְחוּם הָעַל-סָגוֹל (UV). בִּתְחוּם זֶה אוּלְטְרָאסָאט יְגַלֶּה לָנוּ יְקוּם סוֹעֵר וְדִינָמִי שֶׁאִי אֶפְשָׁר לִרְאוֹת מֵהַקַּרְקַע. הַמְשִׁיכוּ לַחְקֹר אֶת הַסְּלַיְדֶר אוֹ הַמְשִׁיכוּ הָלְאָה."}); 
+                    }, 1000);
+                }
+            };
+            document.getElementById('m0-slider').oninput = (e) => { this.state.val = parseInt(e.target.value); updateInfo(this.state.val); };
+            updateInfo(0);
+        },
+        update: function() {},
+        draw: function(ctx, w, h) {
+            let cx = w/2, cy = h/2.5, v = this.state.val;
+            ctx.globalCompositeOperation = "screen";
+            
+            if(v <= 20) { // ALMA / Radio
+                ctx.fillStyle = "#1e3a8a"; // very dark cool tone
+                ctx.beginPath(); ctx.ellipse(cx, cy, 250, 100, Math.PI/6, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = "#7f1d1d"; // dark blobs
+                for(let i=0; i<15; i++) { ctx.beginPath(); ctx.arc(cx + Math.sin(i)*200, cy + Math.cos(i)*80, 20, 0, Math.PI*2); ctx.fill(); }
+            } else if(v <= 45) { // Webb / IR
+                ctx.fillStyle = "#9a3412"; // warm rust
+                ctx.beginPath(); ctx.ellipse(cx, cy, 220, 90, Math.PI/6, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = "#fcd34d";
+                for(let i=0; i<30; i++) { ctx.beginPath(); ctx.arc(cx + Math.cos(i*1.5)*200, cy + Math.sin(i*1.5)*80, 3, 0, Math.PI*2); ctx.fill(); }
+            } else if(v <= 65) { // Hubble / Visible
+                let grd = ctx.createRadialGradient(cx, cy, 10, cx, cy, 200);
+                grd.addColorStop(0, "white"); grd.addColorStop(0.3, "#fef08a"); grd.addColorStop(1, "transparent");
+                ctx.fillStyle = grd; ctx.beginPath(); ctx.ellipse(cx, cy, 250, 100, Math.PI/6, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = "white";
+                for(let i=0; i<50; i++) { ctx.beginPath(); ctx.arc(cx + Math.sin(i*2.1)*220, cy + Math.cos(i*2.1)*90, 1.5, 0, Math.PI*2); ctx.fill(); }
+            } else if(v <= 85) { // Ultrasat / UV
+                ctx.fillStyle = "rgba(168, 85, 247, 0.3)"; // Deep Purple
+                ctx.beginPath(); ctx.ellipse(cx, cy, 180, 70, Math.PI/6, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = "#e0f2fe"; // bright hot dots
+                for(let i=0; i<15; i++) { ctx.beginPath(); ctx.arc(cx + Math.cos(i*3.3)*150, cy + Math.sin(i*3.3)*60, 2.5, 0, Math.PI*2); ctx.fill(); }
+                // Flashing Supernova
+                if (Date.now() % 600 < 300) { 
+                    ctx.fillStyle = "#38bdf8"; ctx.beginPath(); ctx.arc(cx + 80, cy - 20, 6, 0, Math.PI*2); 
+                    ctx.shadowColor = "#38bdf8"; ctx.shadowBlur = 15; ctx.fill(); ctx.shadowBlur = 0; 
+                }
+            } else { // Chandra / X-Ray
+                let grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, 80);
+                grd.addColorStop(0, "white"); grd.addColorStop(0.2, "#0ea5e9"); grd.addColorStop(1, "transparent");
+                ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(cx, cy, 150, 0, Math.PI*2); ctx.fill();
+                ctx.strokeStyle = "rgba(56, 189, 248, 0.6)"; ctx.lineWidth = 10; // Jets
+                ctx.beginPath(); ctx.moveTo(cx - 80, cy - 80); ctx.lineTo(cx + 80, cy + 80); ctx.stroke();
+            }
+            
+            ctx.globalAlpha = 1.0; ctx.globalCompositeOperation = "source-over";
+
+            // Draw current telescope at the bottom observing
+            drawTelescope(ctx, this.state.activeScope, w/2, h - 80, 1.2);
+        }
+    },
+    {
+        id: 1, icon: SVGS.earth, title: {p: "מסלול כדור הארץ (Orbit)", n: "מַסְלוּל כַּדּוּר הָאָרֶץ (Orbit)"},
+        desc: {p: "אולטראסאט מתוכנן למסלול גיאוסטציונרי (GEO) גבוה בהרבה מטלסקופים אחרים - כ-36,000 ק״מ. זה מספק תקשורת רציפה ללא הסתרות. גררו את הטלסקופ למסלול ה-GEO.", n: "אוּלְטְרָאסָאט מְתֻכְנָן לְמַסְלוּל גֵּיאוֹסְטַצְיוֹנָרִי (GEO) גָּבוֹהַּ בְּהַרְבֵּה מִטֶּלֶסְקוֹפִּים אֲחֵרִים - כְּ-36,000 ק״מ. זֶה מְסַפֵּק תִּקְשׁוֹרֶת רְצִיפָה לְלֹא הַסְתָּרוֹת. גָּרְרוּ אֶת הַטֶּלֶסְקוֹפּ לְמַסְלוּל הַ-GEO."},
+        state: { alt: 0 },
+        init: function() { this.state.alt = 0; },
+        ui: function(container) {
+            let div = document.createElement('div'); div.className = 'slider-group';
+            div.innerHTML = `<label>${State.getT({p:"גובה מסלול (ק״מ)",n:"גֹּבַהּ מַסְלוּל (ק״מ)"})}: <span id="m1-val" style="color:var(--accent)">0 km</span></label><input type="range" id="m1-slider" min="0" max="40000" value="0" step="100">`;
+            container.appendChild(div);
+            document.getElementById('m1-slider').oninput = (e) => { 
+                this.state.alt = parseInt(e.target.value); 
+                document.getElementById('m1-val').innerText = this.state.alt.toLocaleString() + ' km';
+            };
+            showProgress({p:"מטפסים למסלול גיאוסטציונרי (GEO)...",n:"מְטַפְּסִים לְמַסְלוּל גֵּיאוֹסְטַצְיוֹנָרִי (GEO)..."});
+        },
+        update: function() {
+            updateProgress((this.state.alt / 35786) * 100);
+            if(this.state.alt >= 35700 && !State.isCompleted) levelComplete({p:"מצוין! הגענו למסלול GEO. כאן אולטראסאט יוכל לשדר נתונים על פיצוצים לחוקרים בכדור הארץ תוך שניות. שחקו עם הגבהים או המשיכו.",n:"מְצֻיָּן! הִגַּעְנוּ לְמַסְלוּל GEO. כָּאן אוּלְטְרָאסָאט יוּכַל לְשַׁדֵּר נְתוּנִים עַל פִּיצוּצִים לְחוֹקְרִים בְּכַדּוּר הָאָרֶץ תּוֹךְ שְׁנִיּוֹת. שַׂחֲקוּ עִם הַגְּבָהִים אוֹ הַמְשִׁיכוּ."});
+        },
+        draw: function(ctx, w, h) {
+            let cx = w/2, earthY = h + 120;
+            ctx.fillStyle = "#0369a1"; ctx.beginPath(); ctx.arc(cx, earthY, w*0.8, 0, Math.PI*2); ctx.fill();
+            let grd = ctx.createRadialGradient(cx, earthY, w*0.8, cx, earthY, w*0.8 + 100);
+            grd.addColorStop(0, "rgba(56,189,248,0.6)"); grd.addColorStop(1, "rgba(56,189,248,0)");
+            ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(cx, earthY, w*0.8 + 100, 0, Math.PI*2); ctx.fill();
+            
+            let getSatY = (altKm) => h - 50 - (altKm / 40000) * (h * 0.7);
+            ctx.fillStyle = "rgba(255,255,255,0.7)"; ctx.strokeStyle = "rgba(255,255,255,0.2)";
+            ctx.textAlign = "right"; ctx.font = "bold 14px Heebo";
+
+            let drawMarker = (alt, name, color) => {
+                let my = getSatY(alt); ctx.beginPath(); ctx.moveTo(0, my); ctx.lineTo(w, my); ctx.stroke();
+                ctx.fillStyle = color; ctx.fillText(name, w - 20, my - 8);
+            };
+
+            drawMarker(540, "Hubble (LEO) ~540 km", "#94a3b8");
+            drawMarker(20200, "GPS (MEO) ~20,200 km", "#94a3b8");
+            drawMarker(35786, "ULTRASAT (GEO) ~35,786 km", "#f59e0b");
+            drawSat(ctx, cx, getSatY(this.state.alt), 1, 0);
+        }
+    },
+    {
+        id: 2, icon: SVGS.fov, title: {p: "שדה ראייה עצום (FOV)", n: "שְׂדֵה רְאִיָּה עָצוּם (FOV)"},
+        desc: {p: "סופרנובות מתרחשות בפתאומיות. אולטראסאט יצלם שטח עצום של מעל 200 מעלות רבועות בבת אחת! פתחו את המפתח עד למקסימום כדי להגיע לקצב הגילויים הנדרש.", n: "סוּפֶּרְנוֹבוֹת מִתְרַחֲשׁוֹת בְּפִתְאוֹמִיּוּת. אוּלְטְרָאסָאט יְצַלֵּם שֶׁטַח עָצוּם שֶׁל מֵעַל 200 מַעֲלוֹת רְבוּעוֹת בְּבַת אַחַת! פִּתְחוּ אֶת הַמִּפְתָּח עַד לַמַּקְסִימוּם כְּדֵי לְהַגִּיעַ לְקֶצֶב הַגִּלּוּיִים הַנִּדְרָשׁ."},
+        state: { fovVal: 0, visualAngle: 0, exp: [], hits: 0, rate: 0, frames: 0 },
+        init: function() { this.state.fovVal = 0; this.state.visualAngle = 0; this.state.exp = []; this.state.hits = 0; this.state.rate = 0; this.state.frames = 0; },
+        ui: function(container) {
+            let div = document.createElement('div'); div.className = 'slider-group';
+            div.innerHTML = `<label>${State.getT({p:"שדה ראייה (מעלות רבועות)",n:"שְׂדֵה רְאִיָּה (מַעֲלוֹת רְבוּעוֹת)"})}: <span id="m2-val" style="color:var(--accent)">0</span></label><input type="range" id="m2-slider" min="0" max="210" value="0" step="1">`;
+            container.appendChild(div);
+            document.getElementById('m2-slider').oninput = (e) => { 
+                this.state.fovVal = parseFloat(e.target.value); 
+                this.state.visualAngle = (this.state.fovVal / 210) * 80;
+                document.getElementById('m2-val').innerText = this.state.fovVal.toFixed(1) + ' sq deg';
+            };
+            showProgress({p:"קצב גילויים: 0 בשנייה (יעד: 50+)",n:"קֶצֶב גִּלּוּיִים: 0 בִּשְׁנִיָּה (יַעַד: 50+)"});
+        },
+        update: function(w, h) {
+            this.state.frames++;
+            // Generate multiple events to enforce high FOV needed to catch enough
+            if(this.state.frames % 2 === 0) {
+                this.state.exp.push({x: Math.random()*w, y: Math.random()*(h*0.5), life: 1.0, caught: false});
+                this.state.exp.push({x: Math.random()*w, y: Math.random()*(h*0.5), life: 1.0, caught: false});
+            }
+            
+            let cx = w/2, satY = h - 50;
+            for(let i=this.state.exp.length-1; i>=0; i--) {
+                let e = this.state.exp[i]; e.life -= 0.015;
+                let angle = Math.atan2(Math.abs(e.x - cx), satY - e.y) * 180 / Math.PI;
+                if(!e.caught && angle <= this.state.visualAngle && e.life > 0.5) { e.caught = true; this.state.hits++; spawnParticles(e.x, e.y, "#0ea5e9", 8); }
+                else if (e.life <= 0) this.state.exp.splice(i, 1);
+            }
+
+            if (this.state.frames % 30 === 0) {
+                this.state.rate = this.state.hits * 2; // rate equivalent per second
+                this.state.hits = 0;
+                DOM.progLabel.innerText = State.getT({p:`קצב גילויים: ${this.state.rate} בשנייה (יעד: 50+)`, n:`קֶצֶב גִּלּוּיִים: ${this.state.rate} בִּשְׁנִיָּה (יַעַד: 50+)`});
+            }
+            updateProgress((this.state.rate / 50)*100);
+
+            // Strict passing conditions: High rate AND Slider must be physically dragged to > 200
+            if(this.state.rate >= 50 && this.state.fovVal >= 200 && !State.isCompleted) {
+                levelComplete({p:"מעולה! הגעתם למפתח המקסימלי של אולטראסאט. שדה ראייה כה רחב מבטיח שלא נפספס סופרנובות גם אם איננו יודעים מראש היכן יתרחשו.",n:"מְעֻלֶּה! הִגַּעְתֶּם לַמִּפְתָּח הַמַּקְסִימָלִי שֶׁל אוּלְטְרָאסָאט. שְׂדֵה רְאִיָּה כֹּה רָחָב מַבְטִיחַ שֶׁלֹּא נְפַסְפֵס סוּפֶּרְנוֹבוֹת גַּם אִם אֵינֶנּוּ יוֹדְעִים מֵרֹאשׁ הֵיכָן יִתְרַחֲשׁוּ."});
+            }
+        },
+        draw: function(ctx, w, h) {
+            drawSat(ctx, w/2, h-50, 1.5, this.state.visualAngle);
+            ctx.fillStyle = "rgba(255,255,255,0.7)"; ctx.textAlign = "right"; ctx.font = "bold 13px Heebo";
+            let drawFOVMarker = (sqdeg, name, ypos) => { ctx.fillStyle = (this.state.fovVal >= sqdeg) ? "#10b981" : "#94a3b8"; ctx.fillText(`${name} (~${sqdeg} sq deg)`, w - 20, ypos); };
+            drawFOVMarker(0.001, "Hubble", h/2 - 40); drawFOVMarker(1.2, "GALEX", h/2 - 20); drawFOVMarker(204, "ULTRASAT", h/2);
+            this.state.exp.forEach(e => { ctx.fillStyle = e.caught ? `rgba(14, 165, 233, ${e.life})` : `rgba(245, 158, 11, ${e.life})`; ctx.beginPath(); ctx.arc(e.x, e.y, 8 + Math.sin(Date.now()/50)*3, 0, Math.PI*2); ctx.fill(); });
+        }
+    },
+    {
+        id: 3, icon: SVGS.filter, title: {p: "סינון רקע (UV Filter)", n: "סִנּוּן רֶקַע (UV Filter)"},
+        desc: {p: "למה לצלם ב-UV? באור נראה השמיים מלאים בכוכבים 'מרעישים'. ב-UV השמיים שחורים יותר, ורק תופעות קיצוניות (כחול/סגול) בולטות! לחצו על תופעות ה-UV.", n: "לָמָּה לְצַלֵּם בְּ-UV? בְּאוֹר נִרְאֶה הַשָּׁמַיִם מְלֵאִים בְּכוֹכָבִים 'מַרְעִישִׁים'. בְּ-UV הַשָּׁמַיִם שְׁחֹרִים יוֹתֵר, וְרַק תּוֹפָעוֹת קִיצוֹנִיּוֹת (כָּחֹל/סָגוֹל) בּוֹלְטוֹת! לַחֲצוּ עַל תּוֹפָעוֹת הַ-UV."},
+        state: { objs: [], score: 0, timer: 0 },
+        init: function() { this.state.objs = []; this.state.score = 0; },
+        ui: function() { showProgress({p:"זיהוי אירועי UV",n:"זִהוּי אֵרוּעֵי UV"}); },
+        handleClick: function(x, y) {
+            if(State.isCompleted) return;
+            for(let i=this.state.objs.length-1; i>=0; i--) {
+                let o = this.state.objs[i];
+                if((x-o.x)**2 + (y-o.y)**2 < 1600) { 
+                    if(o.isUV) { this.state.score++; AudioSys.collect(); spawnParticles(o.x, o.y, "#8b5cf6", 20); }
+                    else { this.state.score = Math.max(0, this.state.score-1); AudioSys.error(); }
+                    this.state.objs.splice(i, 1); return;
+                }
+            }
+        },
+        update: function(w, h) {
+            this.state.timer++;
+            if(!State.isCompleted && this.state.timer % 30 === 0 && this.state.objs.length < 10) {
+                this.state.objs.push({x: 50+Math.random()*(w-100), y: 50+Math.random()*(h-100), isUV: Math.random() > 0.6, life: 1.0});
+            }
+            this.state.objs.forEach(o => o.life -= 0.005); this.state.objs = this.state.objs.filter(o => o.life > 0);
+            updateProgress((this.state.score / 6)*100);
+            if(this.state.score >= 6 && !State.isCompleted) levelComplete({p:"מצוין! השמיים ב-UV מאפשרים לזהות מיד שינויים חדים ואנרגטיים בלי רעשי רקע.",n:"מְצֻיָּן! הַשָּׁמַיִם בְּ-UV מְאַפְשְׁרִים לְזַהוֹת מִיָּד שִׁנּוּיִים חַדִּים וְאֶנֶרְגֵּטִיִּים בְּלִי רַעֲשֵׁי רֶקַע."});
+        },
+        draw: function(ctx) {
+            this.state.objs.forEach(o => {
+                ctx.globalAlpha = o.life; ctx.fillStyle = o.isUV ? "#8b5cf6" : "#ef4444";
+                ctx.beginPath(); ctx.arc(o.x, o.y, o.isUV? 25 : 15, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(o.x, o.y, o.isUV? 10: 5, 0, Math.PI*2); ctx.fill();
+            }); ctx.globalAlpha = 1;
+        }
+    },
+    {
+        id: 4, icon: SVGS.shock, title: {p: "פריצת ההלם (Shock Breakout)", n: "פְּרִיצַת הַהֶלֶם (Shock Breakout)"},
+        desc: {p: "כוכב גוסס קורס לתוך עצמו. גל ההלם פורץ החוצה ויוצר <span class='highlight'>הבזק UV ראשוני</span> לפני שהכוכב מתפוצץ. לכדו את ההבזק!", n: "כּוֹכָב גּוֹסֵס קוֹרֵס לְתוֹךְ עַצְמוֹ. גַּל הַהֶלֶם פּוֹרֵץ הַחוּצָה וְיוֹצֵר <span class='highlight'>הֶבְזֵק UV רִאשׁוֹנִי</span> לִפְנֵי שֶׁהַכּוֹכָב מִתְפּוֹצֵץ. לִכְדוּ אֶת הַהִבְזֵק!"},
+        state: { phase: 0, timer: 0, manual: false }, 
+        init: function() { this.state.phase = 0; this.state.timer = 0; this.state.manual = false; },
+        updatePhaseFromTimer: function() {
+            if(this.state.timer < 150) this.state.phase = 0;
+            else if(this.state.timer <= 190) this.state.phase = 1;
+            else this.state.phase = 2;
+        },
+        ui: function(container) {
+            let btn = document.createElement('button'); btn.className = 'btn-action'; btn.innerHTML = `📸 ${State.getT({p:"לכוד פריצת הלם!",n:"לְכֹד פְּרִיצַת הֶלֶם!"})}`;
+            
+            let manualDiv = document.createElement('div'); manualDiv.className = 'hidden'; manualDiv.id = 'manual-controls-div';
+            manualDiv.innerHTML = `
+                <hr style="border-color:#334155; margin: 15px 0;">
+                <button class="btn-action" style="background:#0ea5e9; font-size:1.1rem;" id="btn-manual-reset">${State.getT({p:"הצב כוכב חדש (שליטה בסליידר)",n:"הַצֵּב כּוֹכָב חָדָשׁ (שְׁלִיטָה בַּסְּלַיְדֶר)"})}</button>
+                <div class="slider-group hidden" id="manual-slider-group" style="margin-top:15px;">
+                    <label>${State.getT({p:"ציר זמן",n:"צִיר זְמַן"})}</label>
+                    <input type="range" id="m4-slider" min="0" max="300" value="0">
+                </div>
+            `;
+            container.appendChild(btn);
+            container.appendChild(manualDiv);
+
+            btn.onclick = () => {
+                if(this.state.manual) return;
+                if(this.state.phase === 1) { 
+                    this.state.phase = 3; AudioSys.boom(); spawnParticles(CtxObj.vw/2, CtxObj.vh/2, "#0ea5e9", 100); 
+                    levelComplete({p:"בינגו! מדידת ה-UV ברגע הפריצה חושפת את הגודל וההרכב של הכוכב.",n:"בִּינְגּוֹ! מְדִידַת הַ-UV בְּרֶגַע הַפְּרִיצָה חוֹשֶׂפֶת אֶת הַגֹּדֶל וְהַהֶרְכֵּב שֶׁל הַכּוֹכָב."}); 
+                    document.getElementById('manual-controls-div').classList.remove('hidden');
+                    btn.classList.add('hidden');
+                }
+                else if(this.state.phase === 0) { AudioSys.error(); typeText(DOM.desc, State.getT({p:"מוקדם מדי! חכו להבזק ה-UV.",n:"מֻקְדָּם מִדַּי! חַכּוּ לְהֶבְזֵק הַ-UV."})); }
+            };
+
+            document.getElementById('btn-manual-reset').onclick = () => {
+                this.state.manual = true;
+                this.state.timer = 0;
+                this.updatePhaseFromTimer();
+                document.getElementById('manual-slider-group').classList.remove('hidden');
+                document.getElementById('m4-slider').value = 0;
+            };
+
+            document.getElementById('m4-slider').oninput = (e) => {
+                this.state.timer = parseInt(e.target.value);
+                this.updatePhaseFromTimer();
+            };
+        },
+        update: function() {
+            if(this.state.phase === 3 || this.state.manual) return;
+            this.state.timer++;
+            if(this.state.timer === 150 && this.state.phase === 0) { this.state.phase = 1; AudioSys.blip(); }
+            if(this.state.timer === 190 && this.state.phase === 1) { this.state.phase = 2; AudioSys.boom(); typeText(DOM.desc, State.getT({p:"פספסתם! ההבזק הראשוני קצר, וכעת אנו רואים רק את גזי הסופרנובה.",n:"פִסְפַסְתֶּם! הַהִבְזֵק הָרִאשׁוֹנִי קָצָר, וְכָעֵת אָנוּ רוֹאִים רַק אֶת גַּזֵּי הַסּוּפֶּרְנוֹבָה."})); }
+            if(this.state.timer > 300 && this.state.phase === 2) this.init(); 
+        },
+        draw: function(ctx, w, h) {
+            let cx = w/2, cy = h/2, r = 60, c = "#ef4444";
+            if(this.state.phase === 0) r += Math.sin(this.state.timer/10)*5;
+            else if(this.state.phase === 1) { r = 40; c = "#e0f2fe"; ctx.fillStyle="rgba(255,255,255,0.3)"; ctx.fillRect(0,0,w,h); } 
+            else if(this.state.phase === 2) { r = Math.min(w, (this.state.timer-190)*15); c = "#b91c1c"; }
+            else if(this.state.phase === 3) r = 0;
+            if(r > 0) {
+                let grd = ctx.createRadialGradient(cx, cy, r*0.2, cx, cy, r*1.5);
+                grd.addColorStop(0, "white"); grd.addColorStop(0.2, c); grd.addColorStop(1, "transparent");
+                ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(cx, cy, r*2, 0, Math.PI*2); ctx.fill();
+            }
+        }
+    },
+    {
+        id: 5, icon: SVGS.neutron, title: {p: "קילונבה (Kilonova)", n: "קִילוֹנוֹבָה (Kilonova)"},
+        desc: {p: "מיזוג של כוכבי נייטרונים מייצר פלטת UV וכמויות אדירות של זהב. מזגו אותם, ואספו את הזהב (בהילוך איטי).", n: "מִזּוּג שֶׁל כּוֹכְבֵי נִיְּטְרוֹנִים מְיַצֵּר פְּלֵטַת UV וְכַמֻּיּוֹת אַדִּירוֹת שֶׁל זָהָב. מַזְּגוּ אוֹתָם, וְאִסְפוּ אֶת הַזָּהָב (בְּהִלּוּךְ אִטִּי)."},
+        state: { dist: 100, merged: false, gold: 0 },
+        init: function() { this.state.dist = 100; this.state.merged = false; this.state.gold = 0; },
+        ui: function(container) {
+            let div = document.createElement('div'); div.className = 'slider-group';
+            div.innerHTML = `<label>${State.getT({p:"מרחק יחסי",n:"מֶרְחָק יַחֲסִי"})}</label><input type="range" id="m5-slider" min="0" max="100" value="100" dir="ltr">`;
+            container.appendChild(div);
+            document.getElementById('m5-slider').oninput = (e) => { this.state.dist = parseInt(e.target.value); };
+            showProgress({p:"חומרים כבדים שנתגלו",n:"חֳמָרִים כְּבֵדִים שֶׁנִּתְגַּלּוּ"});
+        },
+        handleClick: function(x, y) {
+            if(!this.state.merged || State.isCompleted) return;
+            for(let i=CtxObj.particles.length-1; i>=0; i--) {
+                let p = CtxObj.particles[i];
+                if(p.type === 'gold' && Math.abs(x-p.x)<50 && Math.abs(y-p.y)<50) { 
+                    this.state.gold++; AudioSys.collect(); CtxObj.particles.splice(i,1);
+                }
+            }
+        },
+        update: function(w, h) {
+            if(!this.state.merged && this.state.dist <= 5) {
+                this.state.merged = true; AudioSys.boom(); spawnParticles(w/2, h/2, "#8b5cf6", 50); spawnParticles(w/2, h/2, "#fbbf24", 12, 'gold'); 
+                document.getElementById('m5-slider').disabled = true;
+            }
+            if(this.state.merged) {
+                updateProgress((this.state.gold / 8)*100);
+                if(this.state.gold >= 8 && !State.isCompleted) levelComplete({p:"מדהים! גילוי ה-UV ממיזוג כזה יאשר שמרבית הזהב נוצר באירועים אלו.",n:"מַדְהִים! גִּלּוּי הַ-UV מִמִּזּוּג כָּזֶה יְאַשֵּׁר שֶׁמַּרְבִּית הַזָּהָב נוֹצַר בְּאֵרוּעִים אֵלּוּ."});
+            }
+        },
+        draw: function(ctx, w, h) {
+            if(!this.state.merged) {
+                let cx = w/2, cy = h/2, d = this.state.dist * 1.5;
+                ctx.fillStyle = "#e0f2fe"; ctx.shadowColor = "#38bdf8"; ctx.shadowBlur = 20;
+                ctx.beginPath(); ctx.arc(cx - d, cy, 20, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(cx + d, cy, 20, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
+            } else {
+                ctx.fillStyle = "rgba(139, 92, 246, 0.3)"; ctx.beginPath(); ctx.arc(w/2, h/2, 100 + Math.sin(Date.now()/100)*20, 0, Math.PI*2); ctx.fill();
+            }
+        }
+    },
+    {
+        id: 6, icon: SVGS.alert, title: {p: "תקשורת מהירה", n: "תִּקְשׁוֹרֶת מְהִירָה"},
+        desc: {p: "אולטראסאט זיהה אירוע UV! לחצו על הטלסקופ הארצי כדי להפנות אותו למיקום המדויק.", n: "אוּלְטְרָאסָאט זִהָה אֵרוּעַ UV! לַחֲצוּ עַל הַטֶּלֶסְקוֹפּ הָאַרְצִי כְּדֵי לְהַפְנוֹת אוֹתוֹ לַמִּקּוּם הַמְּדֻיָּק."},
+        state: { angle: 0, alert: false, done: false },
+        init: function() { this.state.angle = 0; this.state.alert = false; this.state.done = false; setTimeout(()=>{this.state.alert=true; AudioSys.blip();}, 1500); },
+        ui: function(container) {
+            let btn = document.createElement('button'); btn.className = 'btn-action'; btn.innerHTML = `📡 ${State.getT({p:"הפנה טלסקופ ארצי",n:"הַפְנֵה טֶלֶסְקוֹפּ אַרְצִי"})}`;
+            btn.onclick = () => { if(this.state.alert && !this.state.done) { this.state.done = true; AudioSys.success(); levelComplete({p:"שילוב כוחות! אולטראסאט מוצא את האירוע ומכוון את שאר העולם לחקור אותו במקביל.",n:"שִׁלּוּב כּוֹחוֹת! אוּלְטְרָאסָאט מוֹצֵא אֶת הָאֵרוּעַ וּמְכַוֵּן אֶת שְׁאָר הָעוֹלָם לַחְקֹר אוֹתוֹ בְּמַקְבִּיל."}); } };
+            container.appendChild(btn);
+        },
+        update: function(w, h) { 
+            if(this.state.done) {
+                let targetAngle = Math.atan2(h*0.2 - h*0.8, w*0.5 - w*0.8) + Math.PI/2;
+                this.state.angle += (targetAngle - this.state.angle) * 0.1;
+            }
+        },
+        draw: function(ctx, w, h) {
+            let cx = w*0.8, cy = h*0.8; 
+            let targetX = w*0.5, targetY = h*0.2;
+            drawSat(ctx, w*0.2, h*0.2, 0.8, 0); 
+            if(this.state.alert && !this.state.done) { ctx.strokeStyle="red"; ctx.lineWidth=2; ctx.setLineDash([5,5]); ctx.beginPath(); ctx.moveTo(w*0.2, h*0.2); ctx.lineTo(cx, cy); ctx.stroke(); ctx.setLineDash([]); } 
+            ctx.fillStyle = "#94a3b8"; ctx.fillRect(cx-10, cy, 20, 50); 
+            ctx.save(); ctx.translate(cx, cy); ctx.rotate(this.state.angle);
+            ctx.fillStyle = "#cbd5e1"; ctx.beginPath(); ctx.arc(0,0, 20, 0, Math.PI); ctx.fill(); 
+            ctx.fillStyle = "white"; ctx.fillRect(-15, -60, 30, 60); ctx.restore();
+            if(this.state.alert) { ctx.fillStyle="#38bdf8"; ctx.beginPath(); ctx.arc(targetX, targetY, 10 + Math.sin(Date.now()/50)*5, 0, Math.PI*2); ctx.fill(); }
+            if(this.state.done) { 
+                ctx.strokeStyle="rgba(255,255,255,0.3)"; ctx.lineWidth=30; ctx.beginPath(); 
+                ctx.moveTo(cx + Math.sin(this.state.angle)*60, cy - Math.cos(this.state.angle)*60); 
+                ctx.lineTo(targetX, targetY); ctx.stroke(); 
+            }
+        }
+    },
+    {
+        id: 7, icon: SVGS.quiz, title: {p: "חידון האקדמיה", n: "חִידוֹן הָאָקָדֶמְיָה"},
+        desc: {p: "מוכנים להפוך לחוקרים רשמיים בצוות אולטראסאט?", n: "מוּכָנִים לַהֲפֹךְ לְחוֹקְרִים רִשְׁמִיִּים בְּצֶוֶת אוּלְטְרָאסָאט?"},
+        state: { qIdx: 0, questions: [
+            { svg: SVGS.quiz_orbit, q: {p:"באיזה מסלול יימצא טלסקופ אולטראסאט?",n:"בְּאֵיזֶה מַסְלוּל יִמָּצֵא טֶלֶסְקוֹפּ אוּלְטְרָאסָאט?"}, a: [{t:{p:"מסלול נמוך (LEO)",n:"מַסְלוּל נָמוּךְ (LEO)"},c:0}, {t:{p:"מסלול גיאוסטציונרי (GEO)",n:"מַסְלוּל גֵּיאוֹסְטַצְיוֹנָרִי (GEO)"},c:1}, {t:{p:"במסלול סביב הירח",n:"בְּמַסְלוּל סְבִיב הַיָּרֵחַ"},c:0}] },
+            { svg: SVGS.quiz_fov, q: {p:"מהו היתרון המרכזי של אולטראסאט?",n:"מַהוּ הַיִּתְרוֹן הַמֶּרְכָּזִי שֶׁל אוּלְטְרָאסָאט?"}, a: [{t:{p:"שדה ראייה עצום של מעל 200 מעלות רבועות",n:"שְׂדֵה רְאִיָּה עָצוּם שֶׁל מֵעַל 200 מַעֲלוֹת רְבוּעוֹת"},c:1}, {t:{p:"הוא הגדול ביותר שנבנה אי פעם",n:"הוּא הַגָּדוֹל בְּיוֹתֵר שֶׁנִּבְנָה אֵי פַּעַם"},c:0}, {t:{p:"הוא יכול לצלם דרך עננים בכדור הארץ",n:"הוּא יָכוֹל לְצַלֵּם דֶּרֶךְ עֲנָנִים בְּכַדּוּר הָאָרֶץ"},c:0}] },
+            { svg: SVGS.quiz_gold, q: {p:"מה נוצר ממיזוג של כוכבי נייטרונים?",n:"מָה נוֹצָר מִמִּזּוּג שֶׁל כּוֹכְבֵי נִיְּטְרוֹנִים?"}, a: [{t:{p:"יסודות קלים כמו חמצן",n:"יְסוֹדוֹת קַלִּים כְּמוֹ חַמְצָן"},c:0}, {t:{p:"מתכות כבדות כמו זהב ופלטינה",n:"מַתָּכוֹת כְּבֵדוֹת כְּמוֹ זָהָב וּפְלָטִינָה"},c:1}] }
+        ]},
+        init: function() { this.state.qIdx = 0; },
+        ui: function(container) { 
+            container.innerHTML = '<div id="q-container" class="quiz-container"></div>';
+            this.renderQ(document.getElementById('q-container')); 
+        },
+        renderQ: function(container) {
+            container.classList.remove('fade-out');
+            container.innerHTML = '';
+            let qd = this.state.questions[this.state.qIdx];
+            
+            document.getElementById('canvas-overlay').innerHTML = qd.svg;
+
+            let title = document.createElement('h3'); title.style.color="white"; title.style.textAlign="center"; title.style.marginBottom="15px"; title.innerText = State.getT(qd.q); container.appendChild(title);
+            qd.a.forEach(ans => {
+                let btn = document.createElement('button'); btn.className = 'quiz-btn'; btn.innerHTML = `<svg viewBox="0 0 24 24" fill="var(--secondary)"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm-1 14.5l-4-4 1.4-1.4 2.6 2.6 6.6-6.6 1.4 1.4-8 8z"/></svg> ${State.getT(ans.t)}`;
+                btn.onclick = () => {
+                    if(ans.c) { 
+                        AudioSys.success(); spawnParticles(CtxObj.vw/2, CtxObj.vh/2, "#10b981", 40, 'slow-confetti'); 
+                        this.state.qIdx++; 
+                        container.classList.add('fade-out');
+                        setTimeout(() => {
+                            if(this.state.qIdx >= this.state.questions.length) {
+                                document.getElementById('canvas-overlay').innerHTML = '';
+                                levelComplete({p:"מזל טוב! הוסמכתם כחוקרים בצוות אולטראסאט. העתיד של חקר החלל נמצא בידיים שלכם!",n:"מַזָּל טוֹב! הוּסְמַכְתֶּם כְּחוֹקְרִים בְּצֶוֶת אוּלְטְרָאסָאט. הֶעָתִיד שֶׁל חֵקֶר הֶחָלָל נִמְצָא בַּיָּדַיִם שֶׁלָּכֶם!"}); 
+                            }
+                            else this.renderQ(container);
+                        }, 500);
+                    }
+                    else { AudioSys.error(); btn.style.borderColor = "red"; btn.style.background = "#450a0a"; setTimeout(()=> {btn.style.borderColor=""; btn.style.background="";}, 500); }
+                }; container.appendChild(btn);
+            });
+        },
+        update: function() {}, draw: function(ctx, w, h) { ctx.fillStyle = "rgba(16, 185, 129, 0.1)"; ctx.beginPath(); ctx.arc(w/2, h/2, 150 + Math.sin(Date.now()/500)*30, 0, Math.PI*2); ctx.fill(); }
+    }
+];
+
+/** Engine Core */
+function updateProgress(percent) { DOM.progFill.style.width = Math.min(100, Math.max(0, percent)) + '%'; }
+function showProgress(textObj) { DOM.progWrap.classList.remove('hidden'); DOM.progLabel.innerText = State.getT(textObj); DOM.progFill.style.width = '0%'; }
+
+function loadLevel(idx) {
+    State.lvl = idx; currentLevelLogic = Levels[idx]; State.isCompleted = false; 
+    DOM.menuOverlay.classList.add('hidden'); DOM.msgOverlay.classList.add('hidden');
+    DOM.title.innerHTML = `${currentLevelLogic.icon} ${State.getT(currentLevelLogic.title)}`;
+    DOM.nextLevelWrap.innerHTML = ''; DOM.nextLevelWrap.classList.add('hidden');
+    document.getElementById('canvas-overlay').innerHTML = ''; // Clear SVG overlay
+    typeText(DOM.desc, State.getT(currentLevelLogic.desc));
+    DOM.controls.innerHTML = ''; DOM.progWrap.classList.add('hidden');
+    currentLevelLogic.init(); currentLevelLogic.ui(DOM.controls);
+}
+
+function levelComplete(msgObj) {
+    if (State.isCompleted) return; State.isCompleted = true; 
+    AudioSys.success(); spawnParticles(CtxObj.vw/2, CtxObj.vh/2, "#f59e0b", 50, 'confetti');
+    State.score += 100; DOM.score.innerText = State.score;
+    if(State.lvl >= State.maxUnlocked) State.maxUnlocked = Math.min(Levels.length-1, State.lvl + 1);
+    
+    // Type description but keep controls intact!
+    typeText(DOM.desc, State.getT(msgObj));
+    
+    // Add next level button in a dedicated wrapper below controls
+    DOM.nextLevelWrap.innerHTML = '';
+    DOM.nextLevelWrap.classList.remove('hidden');
+    let btn = document.createElement('button'); btn.className = 'btn-action btn-success'; btn.innerText = State.getT({p:"המשך לשלב הבא",n:"הַמְשֵׁךְ לַשָּׁלָב הַבָּא"});
+    btn.onclick = () => { AudioSys.click(); if(State.lvl < Levels.length-1) loadLevel(State.lvl + 1); else openMenu(); };
+    DOM.nextLevelWrap.appendChild(btn);
+}
+
+function loop() {
+    if(!currentLevelLogic) { requestAnimationFrame(loop); return; }
+    let ctx = DOM.ctx, w = CtxObj.vw, h = CtxObj.vh; ctx.clearRect(0,0,w,h);
+    // Stars BG
+    ctx.fillStyle = "white";
+    CtxObj.stars.forEach(s => { s.size += s.blink; if(s.size>2 || s.size<0.5) s.blink = -s.blink; ctx.globalAlpha = Math.random()*0.5+0.5; ctx.beginPath(); ctx.arc(s.x%w, s.y%h, s.size, 0, Math.PI*2); ctx.fill(); });
+    ctx.globalAlpha = 1.0;
+    
+    currentLevelLogic.update(w, h); currentLevelLogic.draw(ctx, w, h); drawParticles(ctx);
+    animFrame = requestAnimationFrame(loop);
+}
+
+let typingInt = null;
+function typeText(el, text) {
+    if(typingInt) clearInterval(typingInt); el.innerHTML = "";
+    let chars = text.split(''); let i = 0;
+    typingInt = setInterval(() => {
+        if(i < chars.length) { 
+            if(chars[i] === '<') { let tag=''; while(chars[i]!=='>'&&i<chars.length){tag+=chars[i];i++;} tag+='>'; el.innerHTML+=tag; }
+            else { el.innerHTML += chars[i]; }
+            i++; 
+        } else clearInterval(typingInt);
+    }, 20);
+}
+
+function openMenu() {
+    AudioSys.click(); DOM.menuOverlay.classList.remove('hidden'); DOM.levelGrid.innerHTML = '';
+    Levels.forEach((l, i) => {
+        let card = document.createElement('div'); card.className = `level-card ${i > State.maxUnlocked ? 'locked' : ''}`;
+        card.innerHTML = `${l.icon}<div class="lvl-num">שלב ${i+1}</div><div class="lvl-name">${State.getT(l.title)}</div>`;
+        if(i <= State.maxUnlocked) card.onclick = () => { AudioSys.click(); loadLevel(i); };
+        DOM.levelGrid.appendChild(card);
+    });
+}
+
+/** Events */
+DOM.msgBtn.addEventListener('click', () => { AudioSys.init(); DOM.msgOverlay.classList.add('hidden'); loadLevel(0); resize(); loop(); });
+DOM.menuBtn.addEventListener('click', openMenu);
+DOM.btnCloseMenu.addEventListener('click', () => { AudioSys.click(); DOM.menuOverlay.classList.add('hidden'); });
+DOM.nikudBtn.addEventListener('click', () => { 
+    State.useNikud = !State.useNikud; DOM.nikudBtn.innerText = `ניקוד: ${State.useNikud ? '✓' : '✗'}`; 
+    if(currentLevelLogic) { DOM.title.innerHTML = `${currentLevelLogic.icon} ${State.getT(currentLevelLogic.title)}`; typeText(DOM.desc, State.getT(currentLevelLogic.desc)); }
+    if(DOM.menuOverlay.classList.contains('hidden') === false) openMenu();
+});
+DOM.canvas.addEventListener('pointerdown', (e) => {
+    if(currentLevelLogic && currentLevelLogic.handleClick) {
+        let rect = DOM.canvas.getBoundingClientRect();
+        currentLevelLogic.handleClick(e.clientX - rect.left, e.clientY - rect.top);
+    }
+});
+
+resize();
+</script>
+</body>
+</html>
