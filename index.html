@@ -1,0 +1,1611 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ULTRASAT - משימה באולטרה-סגול | PhysiTal</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;700;900&family=Orbitron:wght@400;700;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --uv-primary: #7B2FFF;
+    --uv-secondary: #4A0EBF;
+    --uv-glow: #A855F7;
+    --uv-light: #C084FC;
+    --gold: #FFD700;
+    --space-dark: #050510;
+    --space-mid: #0A0A2E;
+    --alert-red: #FF4444;
+    --success: #00FF88;
+    --text: #E0E0FF;
+    --text-dim: #8888BB;
+  }
+
+  body {
+    font-family: 'Heebo', sans-serif;
+    background: var(--space-dark);
+    color: var(--text);
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  /* ===== STARFIELD BACKGROUND ===== */
+  #starfield {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+  }
+
+  .game-container {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  /* ===== HEADER ===== */
+  .header {
+    text-align: center;
+    padding: 30px 0 20px;
+  }
+
+  .header h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 3em;
+    background: linear-gradient(135deg, var(--uv-light), var(--uv-primary), var(--gold));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none;
+    filter: drop-shadow(0 0 20px rgba(123, 47, 255, 0.5));
+  }
+
+  .header .subtitle {
+    font-size: 1.2em;
+    color: var(--uv-light);
+    margin-top: 8px;
+    font-weight: 300;
+  }
+
+  .header .flag-badge {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 6px 20px;
+    background: linear-gradient(90deg, #0038B8, #FFFFFF, #0038B8);
+    color: #0038B8;
+    font-weight: 700;
+    border-radius: 20px;
+    font-size: 0.95em;
+  }
+
+  /* ===== PROGRESS BAR ===== */
+  .progress-bar {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin: 20px 0 30px;
+    flex-wrap: wrap;
+  }
+
+  .progress-step {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 2px solid var(--uv-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.85em;
+    font-weight: 700;
+    transition: all 0.4s;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .progress-step.active {
+    border-color: var(--uv-glow);
+    background: var(--uv-secondary);
+    box-shadow: 0 0 15px var(--uv-glow);
+    transform: scale(1.15);
+  }
+
+  .progress-step.done {
+    border-color: var(--success);
+    background: rgba(0, 255, 136, 0.15);
+    color: var(--success);
+  }
+
+  .progress-connector {
+    width: 30px;
+    height: 2px;
+    background: var(--uv-secondary);
+    align-self: center;
+  }
+
+  .progress-connector.done {
+    background: var(--success);
+  }
+
+  /* ===== STAGE PANELS ===== */
+  .stage {
+    display: none;
+    animation: fadeSlideIn 0.6s ease;
+  }
+
+  .stage.active { display: block; }
+
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .panel {
+    background: linear-gradient(145deg, rgba(10, 10, 46, 0.95), rgba(5, 5, 16, 0.98));
+    border: 1px solid rgba(123, 47, 255, 0.3);
+    border-radius: 16px;
+    padding: 30px;
+    margin-bottom: 20px;
+    box-shadow: 0 0 30px rgba(123, 47, 255, 0.1);
+  }
+
+  .panel h2 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.5em;
+    color: var(--uv-light);
+    margin-bottom: 15px;
+    text-align: center;
+  }
+
+  .panel h3 {
+    color: var(--gold);
+    font-size: 1.15em;
+    margin: 18px 0 10px;
+  }
+
+  .panel p, .panel li {
+    line-height: 1.8;
+    color: var(--text);
+    font-size: 1.05em;
+  }
+
+  .panel ul { list-style: none; padding: 0; }
+  .panel ul li::before {
+    content: '🔹';
+    margin-left: 8px;
+  }
+
+  .highlight-box {
+    background: rgba(123, 47, 255, 0.12);
+    border-right: 4px solid var(--uv-primary);
+    padding: 15px 20px;
+    border-radius: 0 12px 12px 0;
+    margin: 15px 0;
+  }
+
+  .stat-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    justify-content: center;
+    margin: 20px 0;
+  }
+
+  .stat-card {
+    background: rgba(123, 47, 255, 0.1);
+    border: 1px solid rgba(123, 47, 255, 0.3);
+    border-radius: 12px;
+    padding: 18px 22px;
+    text-align: center;
+    flex: 1;
+    min-width: 140px;
+    max-width: 200px;
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(123, 47, 255, 0.3);
+  }
+
+  .stat-card .value {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.6em;
+    color: var(--gold);
+    display: block;
+  }
+
+  .stat-card .label {
+    font-size: 0.85em;
+    color: var(--text-dim);
+    margin-top: 6px;
+  }
+
+  /* ===== BUTTONS ===== */
+  .btn {
+    display: inline-block;
+    padding: 14px 36px;
+    border: none;
+    border-radius: 30px;
+    font-family: 'Heebo', sans-serif;
+    font-size: 1.1em;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--uv-primary), var(--uv-secondary));
+    color: white;
+    box-shadow: 0 4px 20px rgba(123, 47, 255, 0.4);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 30px rgba(123, 47, 255, 0.6);
+  }
+
+  .btn-success {
+    background: linear-gradient(135deg, #00CC66, #009944);
+    color: white;
+    box-shadow: 0 4px 20px rgba(0, 204, 102, 0.4);
+  }
+
+  .btn-gold {
+    background: linear-gradient(135deg, #FFD700, #FF8C00);
+    color: #1a1a1a;
+    box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4);
+  }
+
+  .btn-center {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 25px;
+    flex-wrap: wrap;
+  }
+
+  /* ===== STAGE 2: FOV COMPARISON ===== */
+  .fov-arena {
+    position: relative;
+    width: 100%;
+    height: 420px;
+    background: radial-gradient(ellipse at center, #0D0D30 0%, #050510 100%);
+    border-radius: 16px;
+    overflow: hidden;
+    margin: 20px 0;
+    border: 1px solid rgba(123, 47, 255, 0.2);
+  }
+
+  .fov-circle {
+    position: absolute;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    transition: all 0.8s ease;
+    cursor: pointer;
+  }
+
+  .fov-circle .fov-label {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.75em;
+    font-weight: 700;
+    text-align: center;
+    text-shadow: 0 0 10px black;
+  }
+
+  .fov-circle .fov-deg {
+    font-size: 0.65em;
+    opacity: 0.8;
+    margin-top: 2px;
+  }
+
+  .fov-slider-container {
+    text-align: center;
+    margin: 15px 0;
+  }
+
+  .fov-slider-container input[type="range"] {
+    -webkit-appearance: none;
+    width: 80%;
+    height: 6px;
+    background: linear-gradient(90deg, var(--uv-secondary), var(--uv-glow));
+    border-radius: 3px;
+    outline: none;
+  }
+
+  .fov-slider-container input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--gold);
+    cursor: pointer;
+    box-shadow: 0 0 10px var(--gold);
+  }
+
+  /* ===== STAGE 3: TRANSIENT HUNT GAME ===== */
+  .hunt-sky {
+    position: relative;
+    width: 100%;
+    height: 500px;
+    background: radial-gradient(ellipse at 30% 40%, #0D0D35 0%, #050510 70%);
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: crosshair;
+    border: 2px solid var(--uv-secondary);
+    margin: 15px 0;
+  }
+
+  .hunt-star {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: white;
+    border-radius: 50%;
+    opacity: 0.6;
+  }
+
+  .hunt-target {
+    position: absolute;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s;
+    animation: pulse 2s ease-in-out infinite;
+    z-index: 5;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+  }
+
+  .hunt-target:hover {
+    filter: brightness(1.5);
+  }
+
+  .hunt-target.caught {
+    animation: caught 0.5s ease forwards;
+  }
+
+  @keyframes caught {
+    0% { transform: scale(1); }
+    50% { transform: scale(2); opacity: 1; }
+    100% { transform: scale(0); opacity: 0; }
+  }
+
+  .hunt-hud {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .hunt-score {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.3em;
+    color: var(--gold);
+  }
+
+  .hunt-timer {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.3em;
+    color: var(--alert-red);
+  }
+
+  .hunt-combo {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1em;
+    color: var(--success);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .hunt-combo.show { opacity: 1; }
+
+  .event-popup {
+    position: absolute;
+    background: rgba(10, 10, 46, 0.95);
+    border: 2px solid var(--uv-glow);
+    border-radius: 12px;
+    padding: 15px;
+    z-index: 20;
+    max-width: 280px;
+    animation: popIn 0.4s ease;
+    pointer-events: auto;
+    text-align: right;
+  }
+
+  @keyframes popIn {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .event-popup h4 {
+    color: var(--gold);
+    font-size: 1.05em;
+    margin-bottom: 6px;
+  }
+
+  .event-popup p {
+    font-size: 0.9em;
+    color: var(--text);
+    line-height: 1.5;
+  }
+
+  .event-popup .dismiss {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 4px 14px;
+    background: var(--uv-primary);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 0.85em;
+  }
+
+  /* ===== STAGE 4: GW RESPONSE GAME ===== */
+  .gw-display {
+    position: relative;
+    width: 100%;
+    height: 220px;
+    background: #080820;
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 15px 0;
+    border: 1px solid rgba(123, 47, 255, 0.3);
+  }
+
+  .gw-wave {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+  }
+
+  .gw-alert-panel {
+    text-align: center;
+    padding: 20px;
+    margin: 15px 0;
+    border-radius: 12px;
+    border: 2px solid transparent;
+    transition: all 0.5s;
+  }
+
+  .gw-alert-panel.waiting {
+    border-color: var(--text-dim);
+    background: rgba(136, 136, 187, 0.05);
+  }
+
+  .gw-alert-panel.alert {
+    border-color: var(--alert-red);
+    background: rgba(255, 68, 68, 0.1);
+    animation: alertFlash 0.5s ease 3;
+  }
+
+  @keyframes alertFlash {
+    0%, 100% { box-shadow: 0 0 0 rgba(255, 68, 68, 0); }
+    50% { box-shadow: 0 0 30px rgba(255, 68, 68, 0.5); }
+  }
+
+  .gw-alert-panel.success {
+    border-color: var(--success);
+    background: rgba(0, 255, 136, 0.1);
+  }
+
+  .slew-btn {
+    padding: 18px 50px;
+    font-size: 1.4em;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    background: linear-gradient(135deg, #FF4444, #CC0000);
+    color: white;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    box-shadow: 0 0 30px rgba(255, 68, 68, 0.4);
+    transition: all 0.3s;
+    margin-top: 10px;
+  }
+
+  .slew-btn:hover:not(:disabled) {
+    transform: scale(1.05);
+    box-shadow: 0 0 50px rgba(255, 68, 68, 0.6);
+  }
+
+  .slew-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .response-time-display {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2.5em;
+    color: var(--gold);
+    margin: 15px 0;
+  }
+
+  .skymap-container {
+    position: relative;
+    width: 100%;
+    height: 300px;
+    background: #060618;
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 15px 0;
+    border: 1px solid rgba(123, 47, 255, 0.2);
+  }
+
+  .skymap-grid line {
+    stroke: rgba(123, 47, 255, 0.15);
+    stroke-width: 0.5;
+  }
+
+  .skymap-fov {
+    fill: rgba(123, 47, 255, 0.15);
+    stroke: var(--uv-glow);
+    stroke-width: 2;
+    transition: all 1s ease;
+  }
+
+  .skymap-source {
+    fill: var(--alert-red);
+    filter: url(#glow);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  /* ===== STAGE 5: SUMMARY ===== */
+  .summary-card {
+    text-align: center;
+    padding: 30px;
+  }
+
+  .summary-grade {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 4em;
+    background: linear-gradient(135deg, var(--gold), #FF8C00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.4));
+  }
+
+  .summary-title {
+    font-size: 1.5em;
+    color: var(--uv-light);
+    margin: 10px 0 20px;
+  }
+
+  .summary-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    justify-content: center;
+    margin: 20px 0;
+  }
+
+  .summary-stat {
+    background: rgba(123, 47, 255, 0.1);
+    border: 1px solid rgba(123, 47, 255, 0.3);
+    border-radius: 12px;
+    padding: 18px 25px;
+    min-width: 160px;
+  }
+
+  .summary-stat .s-value {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.8em;
+    color: var(--gold);
+  }
+
+  .summary-stat .s-label {
+    font-size: 0.9em;
+    color: var(--text-dim);
+    margin-top: 5px;
+  }
+
+  .fact-carousel {
+    background: rgba(123, 47, 255, 0.08);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 1.05em;
+    line-height: 1.7;
+  }
+
+  /* ===== PHYSITAL BADGE ===== */
+  .physital-badge {
+    text-align: center;
+    margin-top: 30px;
+    padding: 20px;
+    border-top: 1px solid rgba(123, 47, 255, 0.2);
+  }
+
+  .physital-badge span {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.1em;
+    color: var(--uv-light);
+    opacity: 0.7;
+  }
+
+  /* ===== UV FILTER TOGGLE ===== */
+  .uv-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 15px 0;
+  }
+
+  .uv-toggle label {
+    font-size: 1em;
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  .toggle-switch {
+    position: relative;
+    width: 56px;
+    height: 28px;
+    background: #333;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+
+  .toggle-switch.on {
+    background: var(--uv-primary);
+    box-shadow: 0 0 15px var(--uv-glow);
+  }
+
+  .toggle-switch::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 22px;
+    height: 22px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.3s;
+  }
+
+  .toggle-switch.on::after {
+    transform: translateX(-28px);
+  }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 700px) {
+    .header h1 { font-size: 2em; }
+    .stat-card { min-width: 110px; }
+    .hunt-sky { height: 400px; }
+    .fov-arena { height: 320px; }
+    .panel { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="starfield"></canvas>
+
+<div class="game-container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <h1>ULTRASAT</h1>
+    <div class="subtitle">🛰️ משימה באולטרה-סגול — טלסקופ החלל הישראלי הראשון</div>
+    <div class="flag-badge">🇮🇱 Made in Israel • Weizmann Institute + NASA</div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-bar" id="progressBar"></div>
+
+  <!-- ===== STAGE 0: INTRO ===== -->
+  <div class="stage active" id="stage0">
+    <div class="panel">
+      <h2>🚀 ברוכים הבאים למשימת ULTRASAT</h2>
+      <p style="text-align:center; font-size:1.15em; margin-bottom:15px;">
+        אתם עומדים להפוך למפעילי טלסקופ החלל הישראלי הראשון!
+      </p>
+
+      <div class="highlight-box">
+        <strong>ULTRASAT</strong> (Ultraviolet Transient Astronomy Satellite) הוא טלסקופ חלל ישראלי פורץ דרך שיישלח לחלל ב-2027.
+        הוא יצפה ביקום <strong>באור אולטרה-סגול</strong> — אור שהעיניים שלנו לא יכולות לראות, ושהאטמוספירה חוסמת ממנו להגיע לטלסקופים עלי אדמות.
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-card">
+          <span class="value">204°²</span>
+          <span class="label">שדה ראייה</span>
+        </div>
+        <div class="stat-card">
+          <span class="value">230-290nm</span>
+          <span class="label">טווח UV</span>
+        </div>
+        <div class="stat-card">
+          <span class="value">&lt;15 דק'</span>
+          <span class="label">זמן התראה</span>
+        </div>
+        <div class="stat-card">
+          <span class="value">GEO</span>
+          <span class="label">מסלול גיאוסינכרוני</span>
+        </div>
+      </div>
+
+      <h3>🤔 למה אולטרה-סגול?</h3>
+      <p>
+        כשאירועים קוסמיים מתרחשים — סופרנובות, התמזגות כוכבי נויטרונים, חור שחור שטורף כוכב — הם
+        משחררים אנרגיה עצומה. <strong>האור הראשון שנפלט הוא לעיתים קרובות באולטרה-סגול</strong>.
+        אם נרצה לתפוס את הרגע הראשון, אנחנו חייבים לצפות ב-UV מהחלל!
+      </p>
+
+      <h3>🇮🇱 מי עומד מאחורי זה?</h3>
+      <ul>
+        <li><strong>מכון ויצמן למדע</strong> — הובלה מדעית</li>
+        <li><strong>סוכנות החלל הישראלית (ISA)</strong> — מימון וניהול</li>
+        <li><strong>התעשייה האווירית (IAI)</strong> — בניית הלוויין</li>
+        <li><strong>אלביט מערכות (Elop)</strong> — בניית הטלסקופ</li>
+        <li><strong>DESY (גרמניה)</strong> — מצלמת UV</li>
+        <li><strong>NASA</strong> — שיגור (כמשא משני)</li>
+      </ul>
+
+      <div class="btn-center">
+        <button class="btn btn-primary" onclick="goToStage(1)">!יאללה, בואו נתחיל 🔭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== STAGE 1: FOV COMPARISON ===== -->
+  <div class="stage" id="stage1">
+    <div class="panel">
+      <h2>🔭 שדה ראייה — מה הופך את ULTRASAT למיוחד?</h2>
+      <p style="text-align:center; margin-bottom:10px;">
+        שדה הראייה של ULTRASAT הוא <strong>200 פעמים גדול יותר</strong> מזה של GALEX, טלסקופ ה-UV הקודם!
+        <br>גררו את הסליידר כדי לראות את ההשוואה.
+      </p>
+
+      <div class="fov-arena" id="fovArena">
+        <canvas id="fovCanvas" width="1000" height="420"></canvas>
+      </div>
+
+      <div class="fov-slider-container">
+        <label>🔍 גודל השוואה: </label>
+        <input type="range" id="fovSlider" min="0" max="100" value="50" oninput="updateFOV()">
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-card" style="border-color: #FF6B6B;">
+          <span class="value" style="color:#FF6B6B;">0.05°²</span>
+          <span class="label">Hubble</span>
+        </div>
+        <div class="stat-card" style="border-color: #4FC3F7;">
+          <span class="value" style="color:#4FC3F7;">0.6°²</span>
+          <span class="label">JWST (NIRCam)</span>
+        </div>
+        <div class="stat-card" style="border-color: #FFA726;">
+          <span class="value" style="color:#FFA726;">1.2°²</span>
+          <span class="label">GALEX</span>
+        </div>
+        <div class="stat-card" style="border-color: var(--uv-glow);">
+          <span class="value" style="color:var(--gold);">204°²</span>
+          <span class="label">ULTRASAT 🇮🇱</span>
+        </div>
+      </div>
+
+      <div class="highlight-box">
+        <strong>מה זה אומר?</strong> בזמן שהאבל מצלם חלון קטנטן בשמיים, ULTRASAT סורק שטח עצום —
+        וכך הוא יכול <strong>לתפוס אירועים חולפים נדירים</strong> שטלסקופ עם שדה ראייה צר היה מפספס!
+      </div>
+
+      <div class="btn-center">
+        <button class="btn btn-primary" onclick="goToStage(2)">!עכשיו בואו נצוד אירועים 🎯</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== STAGE 2: TRANSIENT HUNT ===== -->
+  <div class="stage" id="stage2">
+    <div class="panel">
+      <h2>🎯 ציד אירועים חולפים</h2>
+      <p style="text-align:center; margin-bottom:5px;">
+        שמיים מלאי כוכבים. פתאום — הבזק! סופרנובה? קילונובה? כוכב שנבלע בחור שחור?
+        <br><strong>לחצו על האירועים לפני שהם נעלמים!</strong>
+      </p>
+
+      <div class="uv-toggle">
+        <label>עיניים רגילות 👁️</label>
+        <div class="toggle-switch" id="uvToggle" onclick="toggleUV()"></div>
+        <label>מצב UV 🔮</label>
+      </div>
+
+      <div class="hunt-hud">
+        <div class="hunt-score">ניקוד: <span id="huntScore">0</span></div>
+        <div class="hunt-combo" id="huntCombo">COMBO x2!</div>
+        <div class="hunt-timer">⏱️ <span id="huntTimer">60</span></div>
+      </div>
+
+      <div class="hunt-sky" id="huntSky">
+        <!-- Stars and targets generated by JS -->
+      </div>
+
+      <div id="huntResults" style="display:none;">
+        <div class="stat-row" id="huntStatsRow"></div>
+      </div>
+
+      <div class="btn-center">
+        <button class="btn btn-primary" id="huntStartBtn" onclick="startHunt()">!התחילו לצוד 🎯</button>
+        <button class="btn btn-success" id="huntNextBtn" style="display:none;" onclick="goToStage(3)">הלאה לגלי כבידה! 🌊</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== STAGE 3: GW RESPONSE ===== -->
+  <div class="stage" id="stage3">
+    <div class="panel">
+      <h2>🌊 גלי כבידה — המרוץ אחרי האור</h2>
+      <p style="text-align:center; margin-bottom:10px;">
+        ב-2017 גילו לראשונה גלי כבידה ממיזוג כוכבי נויטרונים (GW170817).
+        <br>הטלסקופים חיפשו את ה<strong>קילונובה</strong> — ההבזק שמגיע אחרי המיזוג.
+        <br><strong>ULTRASAT תוכנן בדיוק בשביל הרגע הזה!</strong>
+      </p>
+
+      <div class="highlight-box">
+        <strong>🧪 הפיזיקה:</strong> כשכוכבי נויטרונים מתמזגים, הם פולטים גלי כבידה ויוצרים
+        <strong>יסודות כבדים</strong> (זהב, פלטינה, אורניום!). החומר הנפלט זוהר באור UV בשעות הראשונות —
+        ואז דועך. חובה לתפוס אותו מהר!
+      </div>
+
+      <h3 style="text-align:center;">מפת שמיים — אתרו את המקור!</h3>
+      <div class="skymap-container" id="skymapContainer">
+        <svg id="skymap" width="100%" height="100%" viewBox="0 0 800 300">
+          <defs>
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="3" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="bigGlow">
+              <feGaussianBlur stdDeviation="8" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <!-- Grid lines -->
+          <g id="skymapGrid"></g>
+          <!-- GW error ellipse -->
+          <ellipse id="gwEllipse" cx="0" cy="0" rx="0" ry="0" fill="rgba(255,68,68,0.08)" stroke="#FF4444" stroke-width="1.5" stroke-dasharray="8,4" style="display:none;"/>
+          <!-- ULTRASAT FOV -->
+          <rect id="ultrasatFOV" x="0" y="0" width="0" height="0" class="skymap-fov" style="display:none;"/>
+          <!-- Source -->
+          <circle id="gwSource" cx="0" cy="0" r="6" class="skymap-source" style="display:none;"/>
+          <!-- Stars -->
+          <g id="skymapStars"></g>
+        </svg>
+      </div>
+
+      <div class="gw-alert-panel waiting" id="gwAlertPanel">
+        <p id="gwAlertText" style="font-size:1.2em;">⏳ מחכים לאות מגלאי גלי כבידה (LIGO/Virgo)...</p>
+        <button class="slew-btn" id="slewBtn" onclick="slewUltrasat()" disabled>📡 כוון את ULTRASAT!</button>
+        <div class="response-time-display" id="responseTime" style="display:none;"></div>
+      </div>
+
+      <div id="gwRounds" style="text-align:center; margin:10px 0;">
+        <span id="gwRoundText" style="color: var(--text-dim); font-size:0.95em;">סיבוב 1 מתוך 3</span>
+      </div>
+
+      <div class="btn-center">
+        <button class="btn btn-primary" id="gwStartBtn" onclick="startGWGame()">!התחילו את המשימה 🌊</button>
+        <button class="btn btn-gold" id="gwNextBtn" style="display:none;" onclick="goToStage(4)">לסיכום המשימה! 🏆</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== STAGE 4: SUMMARY ===== -->
+  <div class="stage" id="stage4">
+    <div class="panel summary-card">
+      <h2>🏆 סיכום המשימה</h2>
+      <div class="summary-grade" id="summaryGrade">A+</div>
+      <div class="summary-title" id="summaryTitle">מפעיל/ת ULTRASAT מצטיין/ת!</div>
+
+      <div class="summary-stats" id="summaryStats"></div>
+
+      <div class="fact-carousel" id="factCarousel">
+        💡 ULTRASAT ישוגר על ידי NASA כמשא משני, בשיתוף עם סוכנות החלל הישראלית ומכון ויצמן למדע.
+      </div>
+
+      <div class="btn-center">
+        <button class="btn btn-primary" onclick="nextFact()">📚 עובדה נוספת</button>
+        <button class="btn btn-gold" onclick="goToStage(0)">🔄 שחקו שוב!</button>
+      </div>
+
+      <div class="physital-badge">
+        <span>PhysiTal | פיזיטל — פיתוח תכנים וטכנולוגיות להוראת המדע 🔬</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ===========================
+// GLOBAL STATE
+// ===========================
+let currentStage = 0;
+const totalStages = 5;
+const gameState = {
+  huntScore: 0,
+  huntCaught: { supernova: 0, kilonova: 0, tde: 0, agn: 0, flare: 0 },
+  gwTimes: [],
+  uvMode: false
+};
+
+// ===========================
+// STARFIELD
+// ===========================
+(function initStarfield() {
+  const canvas = document.getElementById('starfield');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    stars = [];
+    for (let i = 0; i < 300; i++) {
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 1.5 + 0.3,
+        alpha: Math.random() * 0.7 + 0.3,
+        speed: Math.random() * 0.005 + 0.002
+      });
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const t = Date.now() * 0.001;
+    stars.forEach(s => {
+      const a = s.alpha + Math.sin(t * s.speed * 100 + s.x) * 0.2;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(200, 200, 255, ${Math.max(0, Math.min(1, a))})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  draw();
+})();
+
+// ===========================
+// PROGRESS BAR
+// ===========================
+function buildProgress() {
+  const bar = document.getElementById('progressBar');
+  bar.innerHTML = '';
+  const labels = ['🏠', '🔭', '🎯', '🌊', '🏆'];
+  for (let i = 0; i < totalStages; i++) {
+    if (i > 0) {
+      const conn = document.createElement('div');
+      conn.className = 'progress-connector' + (i <= currentStage ? ' done' : '');
+      bar.appendChild(conn);
+    }
+    const step = document.createElement('div');
+    step.className = 'progress-step';
+    if (i === currentStage) step.classList.add('active');
+    else if (i < currentStage) step.classList.add('done');
+    step.textContent = labels[i];
+    step.onclick = () => { if (i <= currentStage) goToStage(i); };
+    bar.appendChild(step);
+  }
+}
+
+function goToStage(n) {
+  document.querySelectorAll('.stage').forEach(s => s.classList.remove('active'));
+  currentStage = n;
+  document.getElementById('stage' + n).classList.add('active');
+  buildProgress();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  if (n === 1) initFOV();
+  if (n === 3) initSkymap();
+  if (n === 4) showSummary();
+}
+
+buildProgress();
+
+// ===========================
+// STAGE 1: FOV COMPARISON
+// ===========================
+function initFOV() {
+  updateFOV();
+}
+
+function updateFOV() {
+  const canvas = document.getElementById('fovCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+  const slider = document.getElementById('fovSlider').value / 100;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Draw background stars
+  const rng = mulberry32(42);
+  for (let i = 0; i < 200; i++) {
+    const sx = rng() * W;
+    const sy = rng() * H;
+    const sr = rng() * 1.2 + 0.3;
+    ctx.beginPath();
+    ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(200, 200, 255, ${rng() * 0.5 + 0.2})`;
+    ctx.fill();
+  }
+
+  const centerX = W / 2;
+  const centerY = H / 2;
+
+  // Telescopes with FOV areas and colors
+  const scopes = [
+    { name: 'Hubble', area: 0.05, color: '#FF6B6B' },
+    { name: 'JWST', area: 0.6, color: '#4FC3F7' },
+    { name: 'GALEX', area: 1.2, color: '#FFA726' },
+    { name: 'ULTRASAT 🇮🇱', area: 204, color: '#A855F7' }
+  ];
+
+  // Scale factor driven by slider
+  const maxR = Math.min(W, H) * 0.45;
+  const baseScale = slider * 0.8 + 0.2;
+  const ultrasatR = maxR * baseScale;
+  const scaleFactor = ultrasatR / Math.sqrt(204);
+
+  // Draw from largest to smallest
+  for (let i = scopes.length - 1; i >= 0; i--) {
+    const s = scopes[i];
+    const r = Math.max(3, Math.sqrt(s.area) * scaleFactor);
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, r, 0, Math.PI * 2);
+    ctx.fillStyle = hexToRGBA(s.color, 0.12);
+    ctx.fill();
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Label
+    if (r > 12) {
+      ctx.fillStyle = s.color;
+      ctx.font = r > 50 ? 'bold 16px Orbitron' : 'bold 11px Orbitron';
+      ctx.textAlign = 'center';
+      ctx.fillText(s.name, centerX, centerY - r + (r > 50 ? 22 : 10));
+
+      ctx.font = '12px Heebo';
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.fillText(s.area + '°²', centerX, centerY - r + (r > 50 ? 40 : 24));
+    }
+  }
+
+  // Comparison text
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.font = '14px Heebo';
+  ctx.textAlign = 'center';
+  ctx.fillText('שדות ראייה בהשוואה — גררו את הסליידר!', centerX, H - 15);
+}
+
+function hexToRGBA(hex, alpha) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function mulberry32(a) {
+  return function() {
+    let t = a += 0x6D2B79F5;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// ===========================
+// STAGE 2: TRANSIENT HUNT
+// ===========================
+let huntInterval = null;
+let huntSpawnInterval = null;
+let huntTimeLeft = 60;
+let huntComboCount = 0;
+let huntComboTimer = null;
+let huntActive = false;
+
+const eventTypes = [
+  {
+    type: 'supernova',
+    label: '💥 סופרנובה!',
+    color: '#FF6B6B',
+    size: 22,
+    points: 10,
+    uvVisible: true,
+    desc: 'כוכב מסיבי שמתפוצץ בסוף חייו. ULTRASAT יתפוס מאות סופרנובות בשנה ויספק עקומות אור UV מוקדמות — ללמוד על הכוכב שהיה!',
+    duration: 6000
+  },
+  {
+    type: 'kilonova',
+    label: '🌟 קילונובה!',
+    color: '#FFD700',
+    size: 18,
+    points: 25,
+    uvVisible: true,
+    desc: 'מיזוג כוכבי נויטרונים! כאן נוצרים זהב, פלטינה ואורניום. ULTRASAT יזהה את הפליטה ב-UV תוך דקות מהמיזוג.',
+    duration: 4000
+  },
+  {
+    type: 'tde',
+    label: '🕳️ TDE — טרף קוסמי!',
+    color: '#E040FB',
+    size: 20,
+    points: 15,
+    uvVisible: true,
+    desc: 'Tidal Disruption Event — חור שחור על-מסיבי טורף כוכב שעבר קרוב מדי! הזוהר ב-UV חזק במיוחד.',
+    duration: 5500
+  },
+  {
+    type: 'agn',
+    label: '🌀 גלקסיה פעילה',
+    color: '#4FC3F7',
+    size: 16,
+    points: 8,
+    uvVisible: true,
+    desc: 'גרעין גלקסיה פעיל (AGN) — חור שחור על-מסיבי שבולע חומר ופולט קרינה עצומה. ULTRASAT יעקוב אחר שינויים בבהירות.',
+    duration: 7000
+  },
+  {
+    type: 'flare',
+    label: '⚡ התלקחות כוכב',
+    color: '#FF8A65',
+    size: 14,
+    points: 5,
+    uvVisible: true,
+    desc: 'כוכב שפולט פתאום אנרגיה עצומה. ULTRASAT ימפה התלקחויות של כוכבים קרובים — חשוב לחיפוש חיים!',
+    duration: 3500
+  }
+];
+
+function startHunt() {
+  huntActive = true;
+  huntTimeLeft = 60;
+  gameState.huntScore = 0;
+  gameState.huntCaught = { supernova: 0, kilonova: 0, tde: 0, agn: 0, flare: 0 };
+  huntComboCount = 0;
+  document.getElementById('huntScore').textContent = '0';
+  document.getElementById('huntTimer').textContent = '60';
+  document.getElementById('huntResults').style.display = 'none';
+  document.getElementById('huntStartBtn').style.display = 'none';
+  document.getElementById('huntNextBtn').style.display = 'none';
+
+  const sky = document.getElementById('huntSky');
+  // Clear previous targets
+  sky.querySelectorAll('.hunt-target, .hunt-star, .event-popup').forEach(el => el.remove());
+
+  // Add background stars
+  for (let i = 0; i < 150; i++) {
+    const star = document.createElement('div');
+    star.className = 'hunt-star';
+    star.style.left = Math.random() * 100 + '%';
+    star.style.top = Math.random() * 100 + '%';
+    star.style.opacity = Math.random() * 0.5 + 0.2;
+    const sz = Math.random() * 2.5 + 1;
+    star.style.width = sz + 'px';
+    star.style.height = sz + 'px';
+    sky.appendChild(star);
+  }
+
+  // Timer
+  huntInterval = setInterval(() => {
+    huntTimeLeft--;
+    document.getElementById('huntTimer').textContent = huntTimeLeft;
+    if (huntTimeLeft <= 0) endHunt();
+  }, 1000);
+
+  // Spawn events
+  spawnEvent();
+  huntSpawnInterval = setInterval(spawnEvent, 2200);
+}
+
+function spawnEvent() {
+  if (!huntActive) return;
+  const sky = document.getElementById('huntSky');
+  const skyRect = sky.getBoundingClientRect();
+  const evt = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+
+  const target = document.createElement('div');
+  target.className = 'hunt-target';
+  target.style.width = evt.size + 'px';
+  target.style.height = evt.size + 'px';
+  target.style.background = `radial-gradient(circle, ${evt.color}, transparent)`;
+  target.style.boxShadow = `0 0 ${evt.size}px ${evt.color}`;
+  target.style.left = (Math.random() * 85 + 5) + '%';
+  target.style.top = (Math.random() * 80 + 5) + '%';
+
+  // UV mode affects visibility
+  if (!gameState.uvMode) {
+    target.style.opacity = '0.25';
+    target.style.filter = 'grayscale(70%)';
+  }
+
+  target.dataset.type = evt.type;
+  target.dataset.points = evt.points;
+
+  target.onclick = (e) => {
+    e.stopPropagation();
+    catchTarget(target, evt, sky);
+  };
+
+  sky.appendChild(target);
+
+  // Auto-remove after duration
+  setTimeout(() => {
+    if (target.parentNode && !target.classList.contains('caught')) {
+      target.style.transition = 'opacity 0.5s';
+      target.style.opacity = '0';
+      setTimeout(() => target.remove(), 500);
+    }
+  }, evt.duration);
+}
+
+function catchTarget(target, evt, sky) {
+  if (target.classList.contains('caught')) return;
+  target.classList.add('caught');
+
+  // Points with combo
+  huntComboCount++;
+  const multiplier = Math.min(huntComboCount, 5);
+  const points = evt.points * multiplier;
+  gameState.huntScore += points;
+  gameState.huntCaught[evt.type]++;
+  document.getElementById('huntScore').textContent = gameState.huntScore;
+
+  // Show combo
+  if (multiplier > 1) {
+    const combo = document.getElementById('huntCombo');
+    combo.textContent = `COMBO x${multiplier}! (+${points})`;
+    combo.classList.add('show');
+    clearTimeout(huntComboTimer);
+    huntComboTimer = setTimeout(() => combo.classList.remove('show'), 1500);
+  }
+
+  // Reset combo after pause
+  clearTimeout(window._comboReset);
+  window._comboReset = setTimeout(() => { huntComboCount = 0; }, 3000);
+
+  // Show info popup
+  showEventPopup(target, evt, sky);
+
+  setTimeout(() => target.remove(), 500);
+}
+
+function showEventPopup(target, evt, sky) {
+  // Remove existing popups
+  sky.querySelectorAll('.event-popup').forEach(p => p.remove());
+
+  const popup = document.createElement('div');
+  popup.className = 'event-popup';
+  const left = parseInt(target.style.left);
+  const top = parseInt(target.style.top);
+  popup.style.left = Math.min(left, 55) + '%';
+  popup.style.top = Math.min(top, 55) + '%';
+  popup.innerHTML = `
+    <h4>${evt.label}</h4>
+    <p>${evt.desc}</p>
+    <button class="dismiss" onclick="this.parentElement.remove()">הבנתי! ✨</button>
+  `;
+  sky.appendChild(popup);
+  setTimeout(() => { if (popup.parentNode) popup.remove(); }, 6000);
+}
+
+function toggleUV() {
+  gameState.uvMode = !gameState.uvMode;
+  const toggle = document.getElementById('uvToggle');
+  toggle.classList.toggle('on', gameState.uvMode);
+
+  // Update existing targets
+  document.querySelectorAll('.hunt-target:not(.caught)').forEach(t => {
+    if (gameState.uvMode) {
+      t.style.opacity = '1';
+      t.style.filter = 'none';
+    } else {
+      t.style.opacity = '0.25';
+      t.style.filter = 'grayscale(70%)';
+    }
+  });
+}
+
+function endHunt() {
+  huntActive = false;
+  clearInterval(huntInterval);
+  clearInterval(huntSpawnInterval);
+
+  // Remove remaining targets
+  document.querySelectorAll('.hunt-target:not(.caught)').forEach(t => t.remove());
+
+  // Show results
+  const results = document.getElementById('huntResults');
+  results.style.display = 'block';
+  const row = document.getElementById('huntStatsRow');
+  row.innerHTML = '';
+
+  const items = [
+    { label: '💥 סופרנובות', val: gameState.huntCaught.supernova },
+    { label: '🌟 קילונובות', val: gameState.huntCaught.kilonova },
+    { label: '🕳️ TDEs', val: gameState.huntCaught.tde },
+    { label: '🌀 AGNs', val: gameState.huntCaught.agn },
+    { label: '⚡ התלקחויות', val: gameState.huntCaught.flare },
+    { label: '🏆 ניקוד', val: gameState.huntScore }
+  ];
+
+  items.forEach(it => {
+    const card = document.createElement('div');
+    card.className = 'stat-card';
+    card.innerHTML = `<span class="value">${it.val}</span><span class="label">${it.label}</span>`;
+    row.appendChild(card);
+  });
+
+  document.getElementById('huntNextBtn').style.display = 'inline-block';
+  document.getElementById('huntStartBtn').style.display = 'inline-block';
+  document.getElementById('huntStartBtn').textContent = '🔄 שחקו שוב';
+}
+
+// ===========================
+// STAGE 3: GW RESPONSE
+// ===========================
+let gwRound = 0;
+let gwWaiting = false;
+let gwAlertTime = 0;
+
+function initSkymap() {
+  const svg = document.getElementById('skymap');
+  const grid = document.getElementById('skymapGrid');
+  const starsG = document.getElementById('skymapStars');
+  grid.innerHTML = '';
+  starsG.innerHTML = '';
+
+  // Grid
+  for (let x = 0; x <= 800; x += 50) {
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', x); line.setAttribute('y1', 0);
+    line.setAttribute('x2', x); line.setAttribute('y2', 300);
+    grid.appendChild(line);
+  }
+  for (let y = 0; y <= 300; y += 50) {
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', 0); line.setAttribute('y1', y);
+    line.setAttribute('x2', 800); line.setAttribute('y2', y);
+    grid.appendChild(line);
+  }
+
+  // Background stars
+  const rng = mulberry32(99);
+  for (let i = 0; i < 80; i++) {
+    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c.setAttribute('cx', rng() * 800);
+    c.setAttribute('cy', rng() * 300);
+    c.setAttribute('r', rng() * 1.5 + 0.3);
+    c.setAttribute('fill', `rgba(200,200,255,${rng() * 0.5 + 0.2})`);
+    starsG.appendChild(c);
+  }
+}
+
+function startGWGame() {
+  gwRound = 0;
+  gameState.gwTimes = [];
+  document.getElementById('gwStartBtn').style.display = 'none';
+  document.getElementById('gwNextBtn').style.display = 'none';
+  nextGWRound();
+}
+
+function nextGWRound() {
+  gwRound++;
+  if (gwRound > 3) {
+    endGWGame();
+    return;
+  }
+
+  document.getElementById('gwRoundText').textContent = `סיבוב ${gwRound} מתוך 3`;
+
+  const panel = document.getElementById('gwAlertPanel');
+  panel.className = 'gw-alert-panel waiting';
+  document.getElementById('gwAlertText').textContent = '⏳ מחכים לאות מגלאי גלי כבידה (LIGO/Virgo)...';
+  document.getElementById('slewBtn').disabled = true;
+  document.getElementById('responseTime').style.display = 'none';
+
+  // Hide skymap elements
+  document.getElementById('gwEllipse').style.display = 'none';
+  document.getElementById('ultrasatFOV').style.display = 'none';
+  document.getElementById('gwSource').style.display = 'none';
+
+  // Random delay before alert
+  const delay = 2000 + Math.random() * 5000;
+  gwWaiting = true;
+
+  setTimeout(() => {
+    if (!gwWaiting) return;
+    triggerGWAlert();
+  }, delay);
+}
+
+function triggerGWAlert() {
+  gwAlertTime = Date.now();
+  const panel = document.getElementById('gwAlertPanel');
+  panel.className = 'gw-alert-panel alert';
+  document.getElementById('gwAlertText').innerHTML = '🚨 <strong>!התראת גלי כבידה</strong> — זוהה מיזוג כוכבי נויטרונים! כוונו את ULTRASAT!';
+  document.getElementById('slewBtn').disabled = false;
+
+  // Show GW error ellipse on skymap
+  const cx = 150 + Math.random() * 500;
+  const cy = 50 + Math.random() * 200;
+  const rx = 40 + Math.random() * 80;
+  const ry = 30 + Math.random() * 50;
+
+  const ellipse = document.getElementById('gwEllipse');
+  ellipse.setAttribute('cx', cx);
+  ellipse.setAttribute('cy', cy);
+  ellipse.setAttribute('rx', rx);
+  ellipse.setAttribute('ry', ry);
+  ellipse.style.display = 'block';
+
+  // Source hidden inside ellipse
+  const srcX = cx + (Math.random() - 0.5) * rx;
+  const srcY = cy + (Math.random() - 0.5) * ry;
+  document.getElementById('gwSource').setAttribute('cx', srcX);
+  document.getElementById('gwSource').setAttribute('cy', srcY);
+
+  // Store for slew
+  window._gwTarget = { cx, cy, srcX, srcY };
+}
+
+function slewUltrasat() {
+  if (!window._gwTarget) return;
+  const responseMs = Date.now() - gwAlertTime;
+  const responseSec = (responseMs / 1000).toFixed(1);
+  gameState.gwTimes.push(parseFloat(responseSec));
+
+  document.getElementById('slewBtn').disabled = true;
+  gwWaiting = false;
+
+  // Animate ULTRASAT FOV moving to target
+  const fov = document.getElementById('ultrasatFOV');
+  const target = window._gwTarget;
+  const fovSize = 70;
+  fov.setAttribute('x', target.cx - fovSize / 2);
+  fov.setAttribute('y', target.cy - fovSize / 2);
+  fov.setAttribute('width', fovSize);
+  fov.setAttribute('height', fovSize);
+  fov.style.display = 'block';
+
+  // Show source
+  setTimeout(() => {
+    document.getElementById('gwSource').style.display = 'block';
+  }, 800);
+
+  // Show response time
+  const panel = document.getElementById('gwAlertPanel');
+  panel.className = 'gw-alert-panel success';
+
+  const realMinutes = (responseSec * 2).toFixed(0);
+  let rating = '🌟 מצוין!';
+  if (responseSec > 3) rating = '✅ טוב!';
+  if (responseSec > 6) rating = '⏰ לאט מדי...';
+
+  document.getElementById('gwAlertText').innerHTML =
+    `${rating} כיוונתם את ULTRASAT תוך <strong>${responseSec}</strong> שניות!<br>
+    <span style="font-size:0.85em; color:var(--text-dim);">
+      (בפועל, ULTRASAT יכול לסובב לכיוון המטרה תוך דקות ספורות — עם שדה ראייה של 204°² הוא כבר מכסה חלק גדול מאליפסת השגיאה!)
+    </span>`;
+
+  document.getElementById('responseTime').textContent = responseSec + 's';
+  document.getElementById('responseTime').style.display = 'block';
+
+  // Next round after delay
+  setTimeout(nextGWRound, 3500);
+}
+
+function endGWGame() {
+  const avgTime = gameState.gwTimes.reduce((a, b) => a + b, 0) / gameState.gwTimes.length;
+
+  const panel = document.getElementById('gwAlertPanel');
+  panel.className = 'gw-alert-panel success';
+  document.getElementById('gwAlertText').innerHTML =
+    `🏆 <strong>משימת גלי הכבידה הושלמה!</strong><br>
+    זמן תגובה ממוצע: <strong>${avgTime.toFixed(1)}</strong> שניות<br>
+    <span style="font-size:0.9em;">ULTRASAT בפועל מגיב ב-<strong>פחות מ-15 דקות</strong> — הכי מהיר בעולם לטלסקופ UV עם שדה ראייה כזה!</span>`;
+
+  document.getElementById('slewBtn').style.display = 'none';
+  document.getElementById('responseTime').style.display = 'none';
+  document.getElementById('gwNextBtn').style.display = 'inline-block';
+  document.getElementById('gwRoundText').textContent = 'הושלם! ✅';
+}
+
+// ===========================
+// STAGE 4: SUMMARY
+// ===========================
+const facts = [
+  '💡 ULTRASAT ישוגר על ידי NASA כמשא משני, בשיתוף עם סוכנות החלל הישראלית ומכון ויצמן.',
+  '🔬 הנפח החוץ-גלקטי שנגיש ל-ULTRASAT גדול פי 300 מזה של GALEX — טלסקופ ה-UV הקודם.',
+  '⚛️ כשכוכבי נויטרונים מתמזגים, נוצרים יסודות כבדים: זהב, פלטינה, ואורניום. הזוהר הראשון — באולטרה-סגול!',
+  '🌍 ULTRASAT ימוקם במסלול גיאוסינכרוני (GEO) — גובה של ~36,000 ק"מ — לצפייה רציפה.',
+  '📡 ההתראות של ULTRASAT יגיעו לקהילה המדעית תוך פחות מ-15 דקות מרגע הגילוי!',
+  '🔭 שדה הראייה של ULTRASAT (204°²) מכסה שטח שמיים גדול פי 200 מ-GALEX.',
+  '🇮🇱 ULTRASAT הוא טלסקופ החלל הראשון של ישראל — פרויקט של מכון ויצמן, ISA, IAI ו-Elbit.',
+  '📸 המצלמה של ULTRASAT בנויה ע"י DESY בגרמניה — רגישה לאור UV בטווח 230-290 ננומטר.',
+  '💀 TDE (Tidal Disruption Event) — כוכב שנטרף ע"י חור שחור — פולט UV עצום ש-ULTRASAT יזהה.',
+  '⏱️ ULTRASAT יכול לסובב ל->50% מהשמיים תוך דקות — מפתח לתפיסת אירועים חולפים!'
+];
+let factIndex = 0;
+
+function nextFact() {
+  factIndex = (factIndex + 1) % facts.length;
+  const carousel = document.getElementById('factCarousel');
+  carousel.style.opacity = 0;
+  setTimeout(() => {
+    carousel.textContent = facts[factIndex];
+    carousel.style.opacity = 1;
+  }, 300);
+}
+
+function showSummary() {
+  const totalCaught = Object.values(gameState.huntCaught).reduce((a, b) => a + b, 0);
+  const avgGW = gameState.gwTimes.length > 0
+    ? (gameState.gwTimes.reduce((a, b) => a + b, 0) / gameState.gwTimes.length).toFixed(1)
+    : '—';
+
+  // Grade
+  let grade = 'S+';
+  let title = 'מפקד/ת משימה אגדי/ת!';
+  const score = gameState.huntScore + (avgGW !== '—' ? Math.max(0, 100 - avgGW * 10) : 0);
+
+  if (score < 50) { grade = 'B'; title = 'מפעיל/ת ULTRASAT מתחיל/ה'; }
+  else if (score < 100) { grade = 'A'; title = 'מפעיל/ת ULTRASAT מיומנ/ת!'; }
+  else if (score < 200) { grade = 'A+'; title = '!מפעיל/ת ULTRASAT מצטיין/ת'; }
+  else { grade = 'S+'; title = '!מפקד/ת משימה אגדי/ת 🚀'; }
+
+  document.getElementById('summaryGrade').textContent = grade;
+  document.getElementById('summaryTitle').textContent = title;
+
+  const stats = document.getElementById('summaryStats');
+  stats.innerHTML = '';
+
+  const items = [
+    { val: gameState.huntScore, label: 'ניקוד ציד' },
+    { val: totalCaught, label: 'אירועים שנתפסו' },
+    { val: avgGW + 's', label: 'תגובת GW ממוצעת' },
+    { val: gameState.huntCaught.kilonova, label: 'קילונובות שנתפסו' }
+  ];
+
+  items.forEach(it => {
+    const div = document.createElement('div');
+    div.className = 'summary-stat';
+    div.innerHTML = `<div class="s-value">${it.val}</div><div class="s-label">${it.label}</div>`;
+    stats.appendChild(div);
+  });
+
+  factIndex = 0;
+  document.getElementById('factCarousel').textContent = facts[0];
+}
+
+</script>
+
+</body>
+</html>
