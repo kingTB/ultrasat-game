@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>משימת אולטראסאט - ציידי הסופרנובות</title>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #8b5cf6; /* סגול - מייצג UV */
+            --primary-dark: #6d28d9;
+            --secondary: #0ea5e9; /* תכלת */
+            --success: #10b981;
+            --success-dark: #059669;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --bg-space: #0f172a;
+            --text-light: #f8fafc;
+            --panel-bg: rgba(30, 41, 59, 0.85);
+        }
+
+        * { box-sizing: border-box; user-select: none; }
+
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Heebo', sans-serif;
+            overflow: hidden;
+            background: var(--bg-space);
+            color: var(--text-light);
+            touch-action: none;
+        }
+
+        #app-container { display: flex; flex-direction: column; height: 100vh; width: 100vw; }
+
+        header {
+            height: 70px;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            z-index: 20; position: relative;
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .header-title {
+            font-size: 1.5rem; font-weight: 900;
+            color: var(--secondary);
+            display: flex; align-items: center; gap: 10px;
+        }
+
+        .score-board {
+            font-size: 1.5rem; font-weight: 900; color: #fbbf24;
+            display: flex; align-items: center; gap: 10px;
+        }
+
+        .toggle-container {
+            display: flex; align-items: center; gap: 10px;
+            font-weight: bold; font-size: 1.1rem; color: white;
+        }
+
+        /* Toggle Switch */
+        .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #475569; transition: .4s; border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px;
+            background-color: white; transition: .4s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--primary); }
+        input:checked + .slider:before { transform: translateX(24px); }
+
+        #game-area { flex-grow: 1; position: relative; overflow: hidden; }
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 10; pointer-events: none;
+        }
+        .pointer-auto { pointer-events: auto; }
+
+        #top-ui {
+            position: absolute; top: 20px; width: 100%;
+            display: flex; flex-direction: column; align-items: center; padding: 0 20px;
+        }
+
+        .dialogue-box {
+            background: var(--panel-bg);
+            padding: 20px 30px; border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            border: 3px solid var(--primary);
+            max-width: 650px; text-align: center;
+            font-size: 1.3rem; font-weight: 700; line-height: 1.5; white-space: pre-wrap;
+            transition: opacity 0.3s, transform 0.3s;
+            opacity: 0; transform: translateY(-20px);
+            color: white; text-shadow: 1px 1px 2px black;
+        }
+        .dialogue-box.visible { opacity: 1; transform: translateY(0); }
+        .highlight { color: var(--warning); font-weight: 900; }
+
+        #controls-container {
+            position: absolute; bottom: 20px; width: 100%;
+            display: flex; justify-content: center; padding: 0 10px;
+        }
+
+        .controls-panel {
+            background: var(--panel-bg);
+            padding: 15px 25px; border-radius: 24px;
+            box-shadow: 0 -5px 30px rgba(0, 0, 0, 0.3);
+            display: flex; flex-direction: row; flex-wrap: wrap; gap: 15px; justify-content: center;
+            max-width: 800px; border-top: 4px solid var(--secondary);
+            backdrop-filter: blur(5px);
+        }
+
+        .hidden { display: none !important; }
+
+        button {
+            background: var(--secondary); color: white; border: none;
+            padding: 12px 30px; font-size: 1.3rem; border-radius: 50px; cursor: pointer;
+            font-family: inherit; font-weight: 900;
+            transition: transform 0.1s, background 0.2s, box-shadow 0.1s;
+            box-shadow: 0 6px 0 #0284c7; text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
+        }
+        button:active { transform: translateY(6px); box-shadow: 0 0 0 #0284c7; }
+        button.btn-primary { background: var(--primary); box-shadow: 0 6px 0 var(--primary-dark); }
+        button:active.btn-primary { box-shadow: 0 0 0 var(--primary-dark); }
+        button.btn-success { background: var(--success); box-shadow: 0 6px 0 var(--success-dark); }
+        button:active.btn-success { box-shadow: 0 0 0 var(--success-dark); }
+        button.btn-danger { background: var(--danger); box-shadow: 0 6px 0 #b91c1c; }
+        button:disabled { background: #64748b; box-shadow: 0 6px 0 #475569; cursor: not-allowed; transform: none; }
+
+        /* Sliders */
+        .slider-group {
+            display: flex; flex-direction: column; align-items: center;
+            background: rgba(255,255,255,0.1); padding: 12px; border-radius: 16px; width: 220px;
+        }
+        .slider-group label { font-size: 1.1rem; font-weight: 900; margin-bottom: 8px; text-align: center; color: white;}
+        input[type="range"] { width: 100%; accent-color: var(--secondary); height: 10px; border-radius: 5px; outline: none; }
+
+        /* Progress Bar */
+        #progress-wrapper { width: 100%; max-width: 500px; margin-top: 15px; }
+        .progress-label { text-align: center; font-weight: bold; font-size: 1.1rem; margin-bottom: 5px; color: var(--secondary); }
+        #progress-container { width: 100%; height: 20px; background: rgba(0,0,0,0.5); border-radius: 10px; overflow: hidden; border: 2px solid #334155; }
+        #progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--primary), var(--secondary)); transition: width 0.1s; }
+
+        .quiz-grid { display: flex; flex-direction: column; gap: 10px; width: 100%; min-width: 300px; }
+        .quiz-grid button { width: 100%; font-size: 1.2rem; padding: 12px; }
+
+        @media (max-width: 768px) {
+            .dialogue-box { font-size: 1.1rem; padding: 15px; }
+            button { font-size: 1.1rem; padding: 10px 20px; }
+            .header-title span { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <header>
+        <div class="header-title">🛰️ <span>אולטראסאט</span></div>
+        <div class="score-board">⭐ <span id="score-display">0</span></div>
+        <div class="toggle-container">
+            <span>ניקוד</span>
+            <label class="switch">
+                <input type="checkbox" id="nikud-toggle" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+    </header>
+
+    <div id="game-area">
+        <canvas id="game-canvas"></canvas>
+        <div id="ui-layer">
+            <div id="top-ui">
+                <div id="dialogue-box" class="dialogue-box pointer-auto hidden"></div>
+                <div id="progress-wrapper" class="pointer-auto hidden">
+                    <div class="progress-label" id="progress-label-text"></div>
+                    <div id="progress-container"><div id="progress-bar"></div></div>
+                </div>
+            </div>
+            
+            <div id="controls-container">
+                <div id="controls-panel" class="controls-panel pointer-auto hidden"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Audio System ---
+    class AudioSystem {
+        constructor() { this.ctx = null; }
+        init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); if (this.ctx.state === 'suspended') this.ctx.resume(); }
+        playTone(freq, type, duration, vol=0.1) {
+            if (!this.ctx) return;
+            const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+            osc.type = type; osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+            gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+            osc.connect(gain); gain.connect(this.ctx.destination);
+            osc.start(); osc.stop(this.ctx.currentTime + duration);
+        }
+        success() { this.init(); this.playTone(523, 'sine', 0.1); setTimeout(() => this.playTone(659, 'sine', 0.1), 100); setTimeout(() => this.playTone(783, 'sine', 0.3, 0.15), 200); }
+        error() { this.init(); this.playTone(200, 'sawtooth', 0.3); setTimeout(() => this.playTone(180, 'sawtooth', 0.4), 150); }
+        click() { this.init(); this.playTone(800, 'sine', 0.05, 0.05); }
+        blip() { this.init(); this.playTone(1200, 'square', 0.05, 0.02); }
+        explosion() {
+            this.init();
+            const bufferSize = this.ctx.sampleRate * 2;
+            const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+            const noise = this.ctx.createBufferSource(); noise.buffer = buffer;
+            const filter = this.ctx.createBiquadFilter(); filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(1000, this.ctx.currentTime);
+            filter.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 1.5);
+            const gain = this.ctx.createGain(); gain.gain.setValueAtTime(0.5, this.ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 1.5);
+            noise.connect(filter); filter.connect(gain); gain.connect(this.ctx.destination);
+            noise.start();
+        }
+    }
+    const audio = new AudioSystem();
+
+    // --- Texts Dictionary (Hebrew with/without Nikud) ---
+    const TEXTS = {
+        welcome: { 
+            p: "ברוכים הבאים לפרויקט אולטראסאט (ULTRASAT)!\nזהו טלסקופ חלל ישראלי חדשני שנועד לחקור את סודות היקום העמוקים ביותר.\nמוכנים להפוך לאסטרופיזיקאים?",
+            n: "בְּרוּכִים הַבָּאִים לִפְרוֹיֶקְט אוּלְטְרָאסָאט (ULTRASAT)!\nזֶהוּ טֶלֶסְקוֹפּ חָלָל יִשְׂרְאֵלִי חַדְשָׁנִי שֶׁנּוֹעַד לַחְקֹר אֶת סוֹדוֹת הַיְּקוּם הָעֲמֻקִּים בְּיוֹתֵר.\nמוּכָנִים לַהֲפֹךְ לְאַסְטְרוֹפִיזִיקָאִים?"
+        },
+        m1_intro: {
+            p: "משימה 1: למה בחלל?\nאולטראסאט חוקר אור מסוג <span class='highlight'>על-סגול (UV)</span>.\nאבל יש בעיה: האטמוספירה של כדור הארץ חוסמת כמעט את כל האור העל-סגול שמגיע מהחלל.\nהשתמשו בסליידר כדי למקם את הטלסקופ מעל האטמוספירה כדי שיוכל לראות!",
+            n: "מְשִׂימָה 1: לָמָּה בֶּחָלָל?\nאוּלְטְרָאסָאט חוֹקֵר אוֹר מִסּוּג <span class='highlight'>עַל-סָגוֹל (UV)</span>.\nאֲבָל יֵשׁ בְּעָיָה: הָאַטְמוֹסְפֵרָה שֶׁל כַּדּוּר הָאָרֶץ חוֹסֶמֶת כִּמְעַט אֶת כָּל הָאוֹר הָעַל-סָגוֹל שֶׁמַּגִּיעַ מֵהֶחָלָל.\nהִשְׁתַּמְּשׁוּ בַּסְלַיְדֶר כְּדֵי לְמַקֵּם אֶת הַטֶּלֶסְקוֹפּ מֵעַל הָאַטְמוֹסְפֵרָה כְּדֵי שֶׁיּוּכַל לִרְאוֹת!"
+        },
+        m1_success: {
+            p: "מצוין! מקמנו את אולטראסאט במסלול גבוה (גיאוסטציונרי).\nעכשיו האטמוספירה לא מסתירה לנו את קרני ה-UV הרחוקות.",
+            n: "מְצֻיָּן! מִקַּמְנוּ אֶת אוּלְטְרָאסָאט בְּמַסְלוּל גָּבוֹהַּ (גֵּיאוֹסְטַצְיוֹנָרִי).\nעַכְשָׁו הָאַטְמוֹסְפֵרָה לֹא מַסְתִּירָה לָנוּ אֶת קַרְנֵי הַ-UV הָרְחוֹקוֹת."
+        },
+        m2_intro: {
+            p: "משימה 2: שדה ראייה ענק!\nאירועים באסטרופיזיקה קורים פתאום ובכל מקום (כמו פיצוצי סופרנובה).\nלטלסקופים רגילים יש 'שדה ראייה' צר, הם מסתכלים דרך קש.\nהגדילו את שדה הראייה של אולטראסאט כדי שנוכל לתפוס 3 פיצוצים לפני שיעלמו!",
+            n: "מְשִׂימָה 2: שְׂדֵה רְאִיָּה עֲנָק!\nאֵרוּעִים בְּאַסְטְרוֹפִיזִיקָה קוֹרִים פִּתְאוֹם וּבְכָל מָקוֹם (כְּמוֹ פִּיצוּצֵי סוּפֶּרְנוֹבָה).\nלְטֶלֶסְקוֹפִּים רְגִילִים יֵשׁ 'שְׂדֵה רְאִיָּה' צַר, הֵם מִסְתַּכְּלִים דֶּרֶךְ קַשׁ.\nהַגְדִּילוּ אֶת שְׂדֵה הָרְאִיָּה שֶׁל אוּלְטְרָאסָאט כְּדֵי שֶׁנּוּכַל לִתְפֹּס 3 פִּיצוּצִים לִפְנֵי שֶׁיֵּעָלְמוּ!"
+        },
+        m2_success: {
+            p: "מדהים! לאולטראסאט יש שדה ראייה הגדול פי 100 מטלסקופים דומים.\nהוא יכול לסרוק חלק עצום מהשמיים כל כמה דקות ולתפוס הכל בזמן אמת.",
+            n: "מַדְהִים! לְאוּלְטְרָאסָאט יֵשׁ שְׂדֵה רְאִיָּה הַגָּדוֹל פִּי 100 מִטֶּלֶסְקוֹפִּים דּוֹמִים.\nהוּא יָכוֹל לִסְרֹק חֵלֶק עָצוּם מֵהַשָּׁמַיִם כָּל כַּמָּה דַּקּוֹת וְלִתְפֹּס הַכֹּל בִּזְמַן אֱמֶת."
+        },
+        m3_intro: {
+            p: "משימה 3: פריצת ההלם (Shock Breakout)\nמטרת העל שלנו: לזהות כוכב ברגע הראשון שהוא מתפוצץ!\nחכו בסבלנות. כשהכוכב המזדקן יעבור קריסה, תראו הבזק מהיר בצבע כחול/UV.\n<span class='highlight'>לחצו מיד על 'לכוד מידע' בדיוק בהבזק הזה!</span>",
+            n: "מְשִׂימָה 3: פְּרִיצַת הַהֶלֶם (Shock Breakout)\nמַטְּרַת הָעָל שֶׁלָּנוּ: לְזַהוֹת כּוֹכָב בָּרֶגַע הָרִאשׁוֹן שֶׁהוּא מִתְפּוֹצֵץ!\nחַכּוּ בְּסַבְלָנוּת. כְּשֶׁהַכּוֹכָב הַמִּזְדַּקֵּן יַעֲבֹר קְרִיסָה, תִּרְאוּ הִבְזֵק מָהִיר בְּצֶבַע כָּחֹל/UV.\n<span class='highlight'>לַחֲצוּ מִיָּד עַל 'לְכֹד מֵידָע' בְּדִיּוּק בַּהִבְזֵק הַזֶּה!</span>"
+        },
+        m3_fail: {
+            p: "פספסתם את הרגע הראשון... אור הסופרנובה הרגיל (באדום) כבר השתלט.\nאולטראסאט מחפש את הבזק ה-UV הראשוני! נסו שוב.",
+            n: "פִסְפַסְתֶּם אֶת הָרֶגַע הָרִאשׁוֹן... אוֹר הַסּוּפֶּרְנוֹבָה הָרָגִיל (בְּאָדֹם) כְּבָר הִשְׁתַּלֵּט.\nאוּלְטְרָאסָאט מְחַפֵּשׂ אֶת הֶבְזֵק הַ-UV הָרִאשׁוֹנִי! נַסּוּ שׁוּב."
+        },
+        m3_success: {
+            p: "הצלחה פנומנלית!\nתפסתם את 'פריצת ההלם'! מדענים ברחבי העולם יכולים עכשיו לחקור ממה מורכב הכוכב ואיך הוא מת. אולטראסאט מספק לנו מידע חדש על היקום.",
+            n: "הַצְלָחָה פֶנוֹמֶנָלִית!\nתָּפַסְתֶּם אֶת 'פְּרִיצַת הַהֶלֶם'! מַדְּעָנִים בְּרַחֲבֵי הָעוֹלָם יְכוֹלִים עַכְשָׁו לַחְקֹר מִמָּה מֻרְכָּב הַכּוֹכָב וְאֵיךְ הוּא מֵת. אוּלְטְרָאסָאט מְסַפֵּק לָנוּ מֵידָע חָדָשׁ עַל הַיְּקוּם."
+        },
+        quiz_intro: {
+            p: "זמן מבחן לחוקרי החלל!\nבואו נראה מה למדנו על טלסקופ אולטראסאט.",
+            n: "זְמַן מִבְחָן לְחוֹקְרֵי הֶחָלָל!\nבּוֹאוּ נִרְאֶה מָה לָמַדְנוּ עַל טֶלֶסְקוֹפּ אוּלְטְרָאסָאט."
+        },
+        end: {
+            p: "כל הכבוד חוקרים!\nהשלמתם את המשימה. טלסקופ אולטראסאט ישוגר לחלל ויעזור לאנושות להבין איך נוצרים יסודות כבדים ומה קורה כשכוכבים מתים.",
+            n: "כָּל הַכָּבוֹד חוֹקְרִים!\nהִשְׁלַמְתֶּם אֶת הַמְּשִׂימָה. טֶלֶסְקוֹפּ אוּלְטְרָאסָאט יְשׁוּגַר לֶחָלָל וְיַעֲזֹר לָאֱנוֹשׁוּת לְהָבִין אֵיךְ נוֹצָרִים יְסוֹדוֹת כְּבֵדִים וּמָה קוֹרֶה כְּשֶׁכּוֹכָבִים מֵתִים."
+        }
+    };
+
+    const LABELS = {
+        btn_start: { p: "התחל משימה", n: "הַתְחֵל מְשִׂימָה" },
+        btn_next: { p: "המשך", n: "הַמְשֵׁךְ" },
+        btn_restart: { p: "שחק שוב", n: "שַׂחֵק שׁוּב" },
+        btn_capture: { p: "לכוד מידע עכשיו!", n: "לְכֹד מֵידָע עַכְשָׁו!" },
+        altitude: { p: "גובה הטלסקופ (מעל כדור הארץ)", n: "גֹּבַהּ הַטֶּלֶסְקוֹפּ (מֵעַל כַּדּוּר הָאָרֶץ)" },
+        fov: { p: "גודל שדה הראייה (FOV)", n: "גֹּדֶל שְׂדֵה הָרְאִיָּה (FOV)" },
+        prog_m1: { p: "מתרחקים מהאטמוספירה...", n: "מִתְרַחֲקִים מֵהָאַטְמוֹסְפֵרָה..." },
+        prog_m2: { p: "פיצוצים שנלכדו", n: "פִּיצוּצִים שֶׁנִּלְכְּדוּ" }
+    };
+
+    const QUIZ = [
+        {
+            q: { p: "איזה סוג אור טלסקופ אולטראסאט נועד לחקור?", n: "אֵיזֶה סוּג אוֹר טֶלֶסְקוֹפּ אוּלְטְרָאסָאט נוֹעַד לַחְקֹר?" },
+            opts: [
+                { p: "אור תת-אדום (Infrared)", n: "אוֹר תַּת-אָדֹם (Infrared)", c: false },
+                { p: "אור על-סגול (UV)", n: "אוֹר עַל-סָגוֹל (UV)", c: true },
+                { p: "גלי רדיו", n: "גַּלֵּי רַדְיוֹ", c: false }
+            ]
+        },
+        {
+            q: { p: "למה חייבים לשלוח את אולטראסאט לחלל ולא לשים אותו על כדור הארץ?", n: "לָמָּה חַיָּבִים לִשְׁלֹחַ אֶת אוּלְטְרָאסָאט לֶחָלָל וְלֹא לָשִׂים אוֹתוֹ עַל כַּדּוּר הָאָרֶץ?" },
+            opts: [
+                { p: "כי האטמוספירה שלנו חוסמת קרינת על-סגול", n: "כִּי הָאַטְמוֹסְפֵרָה שֶׁלָּנוּ חוֹסֶמֶת קְרִינַת עַל-סָגוֹל", c: true },
+                { p: "כי בחלל אין כוח משיכה בכלל", n: "כִּי בֶּחָלָל אֵין כּוֹחַ מְשִׁיכָה בִּכְלָל", c: false },
+                { p: "כדי שהוא יהיה קרוב יותר לשמש", n: "כְּדֵי שֶׁהוּא יִהְיֶה קָרוֹב יוֹתֵר לַשֶּׁמֶשׁ", c: false }
+            ]
+        },
+        {
+            q: { p: "מהו היתרון הגדול ביותר של אולטראסאט לעומת טלסקופים אחרים בחלל?", n: "מַהוּ הַיִּתְרוֹן הַגָּדוֹל בְּיוֹתֵר שֶׁל אוּלְטְרָאסָאט לְעֻמַּת טֶלֶסְקוֹפִּים אֲחֵרִים בֶּחָלָל?" },
+            opts: [
+                { p: "יש לו שדה ראייה עצום (רואה המון שמיים בבת אחת)", n: "יֵשׁ לוֹ שְׂדֵה רְאִיָּה עָצוּם (רוֹאֶה הֲמוֹן שָׁמַיִם בְּבַת אַחַת)", c: true },
+                { p: "הוא מצלם בצבעים הכי יפים", n: "הוּא מְצַלֵּם בַּצְּבָעִים הֲכִי יָפִים", c: false },
+                { p: "הוא טס במהירות האור", n: "הוּא טָס בִּמְהִירוּת הָאוֹר", c: false }
+            ]
+        }
+    ];
+
+    // --- State & DOM ---
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+    const ui = {
+        dialogue: document.getElementById('dialogue-box'),
+        controls: document.getElementById('controls-panel'),
+        progWrap: document.getElementById('progress-wrapper'),
+        progBar: document.getElementById('progress-bar'),
+        progLabel: document.getElementById('progress-label-text'),
+        score: document.getElementById('score-display'),
+        nikud: document.getElementById('nikud-toggle')
+    };
+
+    let state = 'WELCOME';
+    let isNikud = true;
+    let score = 0;
+    let currentDialogueKey = '';
+    let quizIndex = 0;
+    let typeInterval;
+    
+    // Physics / Sim data
+    let simData = {
+        altitude: 0,
+        fov: 10,
+        explosions: [], // for M2
+        captured: 0,
+        starState: 'NORMAL', // for M3 (NORMAL, CONTRACTING, BREAKOUT, SUPERNOVA)
+        starTimer: 0,
+        particles: [],
+        stars: []
+    };
+
+    function resize() {
+        canvas.width = document.getElementById('game-area').clientWidth;
+        canvas.height = document.getElementById('game-area').clientHeight;
+        initStars();
+    }
+    window.addEventListener('resize', resize);
+    
+    function initStars() {
+        simData.stars = [];
+        for(let i=0; i<150; i++) {
+            simData.stars.push({
+                x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+                size: Math.random() * 2, blink: Math.random() * 0.05
+            });
+        }
+    }
+
+    // --- Text Utilities ---
+    function getT(obj) { return obj ? (isNikud ? obj.n : obj.p) : ''; }
+    function splitHebrewText(text) {
+        if (window.Intl && Intl.Segmenter) return Array.from(new Intl.Segmenter('he', { granularity: 'grapheme' }).segment(text)).map(s => s.segment);
+        return text.match(/[\s\S][\u0591-\u05C7]*/g) || [];
+    }
+
+    function showDialogue(key, animate = true) {
+        currentDialogueKey = key;
+        ui.dialogue.classList.remove('hidden'); ui.dialogue.classList.add('visible');
+        let text = getT(TEXTS[key]);
+        if (animate) {
+            audio.click(); ui.dialogue.innerHTML = "";
+            let chars = splitHebrewText(text); let i = 0;
+            if(typeInterval) clearInterval(typeInterval);
+            typeInterval = setInterval(() => {
+                if (i < chars.length) {
+                    if(chars[i] === '\n') ui.dialogue.appendChild(document.createElement('br'));
+                    // Hack for simple HTML tags in typewriter
+                    else if(chars[i] === '<') {
+                        let tag = '';
+                        while(chars[i] !== '>' && i < chars.length) { tag += chars[i]; i++; }
+                        tag += '>';
+                        let span = document.createElement('span'); span.innerHTML = tag;
+                        ui.dialogue.innerHTML += tag; // direct append for tags
+                    }
+                    else ui.dialogue.innerHTML += chars[i];
+                    i++;
+                } else clearInterval(typeInterval);
+            }, 30);
+        } else ui.dialogue.innerHTML = text.replace(/\n/g, '<br>');
+    }
+
+    function hideDialogue() { ui.dialogue.classList.remove('visible'); setTimeout(() => ui.dialogue.classList.add('hidden'), 300); }
+    function updateScore() { ui.score.innerText = score; }
+
+    ui.nikud.addEventListener('change', (e) => {
+        isNikud = e.target.checked;
+        if (state === 'QUIZ' && QUIZ[quizIndex]) ui.dialogue.innerHTML = getT(QUIZ[quizIndex].q);
+        else if (currentDialogueKey) showDialogue(currentDialogueKey, false);
+        renderControls();
+    });
+
+    // --- UI Controls Rendering ---
+    function renderControls() {
+        ui.controls.innerHTML = ''; ui.controls.classList.remove('hidden');
+        
+        if (state === 'WELCOME') {
+            let btn = document.createElement('button'); btn.innerText = getT(LABELS.btn_start);
+            btn.classList.add('btn-primary');
+            btn.onclick = () => { audio.click(); setState('M1_INTRO'); };
+            ui.controls.appendChild(btn);
+        }
+        else if (state.endsWith('_INTRO') || state.endsWith('_SUCCESS') || state === 'M3_FAIL') {
+            let btn = document.createElement('button'); btn.innerText = getT(LABELS.btn_next); btn.classList.add('btn-success');
+            btn.onclick = () => {
+                audio.click();
+                if(state === 'M1_INTRO') setState('M1');
+                else if(state === 'M1_SUCCESS') setState('M2_INTRO');
+                else if(state === 'M2_INTRO') setState('M2');
+                else if(state === 'M2_SUCCESS') setState('M3_INTRO');
+                else if(state === 'M3_INTRO' || state === 'M3_FAIL') setState('M3');
+                else if(state === 'M3_SUCCESS') setState('QUIZ_INTRO');
+                else if(state === 'QUIZ_INTRO') setState('QUIZ');
+            };
+            ui.controls.appendChild(btn);
+        }
+        else if (state === 'M1') {
+            let div = document.createElement('div'); div.className = 'slider-group';
+            let lbl = document.createElement('label'); lbl.innerText = getT(LABELS.altitude);
+            let inp = document.createElement('input'); inp.type = 'range'; inp.min = 0; inp.max = 100; inp.value = simData.altitude;
+            inp.oninput = (e) => { simData.altitude = parseInt(e.target.value); };
+            div.appendChild(lbl); div.appendChild(inp); ui.controls.appendChild(div);
+        }
+        else if (state === 'M2') {
+            let div = document.createElement('div'); div.className = 'slider-group';
+            let lbl = document.createElement('label'); lbl.innerText = getT(LABELS.fov);
+            let inp = document.createElement('input'); inp.type = 'range'; inp.min = 10; inp.max = 90; inp.value = simData.fov;
+            inp.oninput = (e) => { simData.fov = parseInt(e.target.value); };
+            div.appendChild(lbl); div.appendChild(inp); ui.controls.appendChild(div);
+        }
+        else if (state === 'M3') {
+            let btn = document.createElement('button'); btn.innerHTML = `📸 ${getT(LABELS.btn_capture)}`; btn.classList.add('btn-primary');
+            btn.onclick = () => {
+                if (simData.starState === 'BREAKOUT') {
+                    setState('M3_SUCCESS');
+                } else {
+                    setState('M3_FAIL');
+                }
+            };
+            ui.controls.appendChild(btn);
+        }
+        else if (state === 'QUIZ') {
+            let q = QUIZ[quizIndex];
+            let grid = document.createElement('div'); grid.className = 'quiz-grid';
+            q.opts.forEach(opt => {
+                let btn = document.createElement('button'); btn.innerText = getT(opt);
+                btn.onclick = () => {
+                    if(opt.c) {
+                        audio.success(); spawnConfetti(); score += 100; updateScore(); quizIndex++;
+                        if(quizIndex >= QUIZ.length) setTimeout(() => setState('END'), 1500);
+                        else setTimeout(() => { renderControls(); ui.dialogue.innerHTML = getT(QUIZ[quizIndex].q); }, 1500);
+                        btn.style.background = 'var(--success)';
+                    } else {
+                        audio.error(); btn.style.background = 'var(--danger)';
+                        setTimeout(() => { btn.style.background = ''; }, 500);
+                    }
+                };
+                grid.appendChild(btn);
+            });
+            ui.controls.appendChild(grid);
+            ui.dialogue.innerHTML = getT(q.q);
+        }
+        else if (state === 'END') {
+            let btn = document.createElement('button'); btn.innerText = getT(LABELS.btn_restart); btn.classList.add('btn-primary');
+            btn.onclick = () => { audio.click(); quizIndex = 0; score = 0; updateScore(); setState('WELCOME'); };
+            ui.controls.appendChild(btn);
+        }
+    }
+
+    // --- State Machine ---
+    function setState(newState) {
+        state = newState;
+        ui.progWrap.classList.add('hidden');
+        
+        switch(state) {
+            case 'WELCOME': simData.altitude = 0; showDialogue('welcome'); break;
+            case 'M1_INTRO': showDialogue('m1_intro'); break;
+            case 'M1':
+                hideDialogue(); simData.altitude = 0;
+                ui.progLabel.innerText = getT(LABELS.prog_m1);
+                ui.progWrap.classList.remove('hidden'); ui.progBar.style.width = '0%';
+                break;
+            case 'M1_SUCCESS': audio.success(); spawnConfetti(); showDialogue('m1_success'); score+=50; updateScore(); break;
+            
+            case 'M2_INTRO': showDialogue('m2_intro'); break;
+            case 'M2':
+                hideDialogue(); simData.fov = 10; simData.explosions = []; simData.captured = 0;
+                ui.progLabel.innerText = getT(LABELS.prog_m2);
+                ui.progWrap.classList.remove('hidden'); ui.progBar.style.width = '0%';
+                setInterval(() => {
+                    if(state === 'M2') {
+                        simData.explosions.push({
+                            x: Math.random() * canvas.width, y: Math.random() * (canvas.height * 0.6),
+                            life: 1.0, caught: false
+                        });
+                        audio.blip();
+                    }
+                }, 1500);
+                break;
+            case 'M2_SUCCESS': audio.success(); spawnConfetti(); showDialogue('m2_success'); score+=100; updateScore(); break;
+
+            case 'M3_INTRO': showDialogue('m3_intro'); break;
+            case 'M3_FAIL': audio.error(); showDialogue('m3_fail'); break;
+            case 'M3':
+                hideDialogue(); simData.starState = 'NORMAL'; simData.starTimer = 0;
+                break;
+            case 'M3_SUCCESS': audio.success(); spawnExplosion(canvas.width/2, canvas.height/2, "#0ea5e9", 150); showDialogue('m3_success'); score+=200; updateScore(); break;
+
+            case 'QUIZ_INTRO': showDialogue('quiz_intro'); break;
+            case 'END': showDialogue('end'); break;
+        }
+        renderControls();
+    }
+
+    // --- Visual FX ---
+    function spawnExplosion(x, y, color, count=50) {
+        audio.explosion();
+        for(let i=0; i<count; i++) {
+            simData.particles.push({
+                x: x, y: y,
+                vx: (Math.random()-0.5)*20, vy: (Math.random()-0.5)*20,
+                color: color, life: 1.0, size: Math.random()*8+2
+            });
+        }
+    }
+    function spawnConfetti() {
+        for(let i=0; i<80; i++) {
+            simData.particles.push({
+                x: canvas.width/2 + (Math.random()-0.5)*200, y: canvas.height/3 + (Math.random()-0.5)*100,
+                vx: (Math.random()-0.5)*15, vy: (Math.random()-1)*15,
+                color: `hsl(${Math.random()*360}, 100%, 60%)`, life: 1.0, size: 6, isSquare: true, rot: Math.random()*Math.PI, vRot: (Math.random()-0.5)*0.2
+            });
+        }
+    }
+    function drawParticles() {
+        for(let i=simData.particles.length-1; i>=0; i--) {
+            let p = simData.particles[i];
+            if(p.isSquare) p.vy += 0.3; // gravity for confetti
+            p.x += p.vx; p.y += p.vy;
+            if(p.isSquare) p.rot += p.vRot;
+            p.life -= 0.02;
+            
+            ctx.save(); ctx.globalAlpha = Math.max(0, p.life);
+            ctx.translate(p.x, p.y);
+            if(p.isSquare) { ctx.rotate(p.rot); ctx.fillStyle = p.color; ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size); }
+            else { ctx.beginPath(); ctx.arc(0,0, p.size, 0, Math.PI*2); ctx.fillStyle = p.color; ctx.fill(); }
+            ctx.restore();
+            
+            if(p.life <= 0) simData.particles.splice(i, 1);
+        }
+    }
+
+    function drawSatellite(x, y, scale = 1, fovAngle = 0) {
+        ctx.save();
+        ctx.translate(x, y); ctx.scale(scale, scale);
+        
+        // Solar panels
+        ctx.fillStyle = "#1e40af"; ctx.strokeStyle = "#60a5fa"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.roundRect(-80, -15, 50, 30, 4); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.roundRect(30, -15, 50, 30, 4); ctx.fill(); ctx.stroke();
+        
+        // Body
+        ctx.fillStyle = "#cbd5e1";
+        ctx.fillRect(-30, -25, 60, 50); ctx.strokeRect(-30, -25, 60, 50);
+        
+        // Lens (FOV indicator)
+        ctx.fillStyle = "#38bdf8";
+        ctx.beginPath(); ctx.arc(0, -25, 20, Math.PI, 0); ctx.fill(); ctx.stroke();
+        
+        if(fovAngle > 0) {
+            ctx.fillStyle = "rgba(56, 189, 248, 0.2)";
+            ctx.beginPath();
+            ctx.moveTo(0, -25);
+            let rad = fovAngle * Math.PI / 180;
+            ctx.lineTo(-Math.sin(rad)*300, -25 - Math.cos(rad)*300);
+            ctx.arc(0, -25, 300, -Math.PI/2 - rad, -Math.PI/2 + rad);
+            ctx.lineTo(0, -25);
+            ctx.fill();
+        }
+        ctx.restore();
+    }
+
+    // --- Main Game Loop ---
+    function loop() {
+        // Space Background
+        let grd = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        grd.addColorStop(0, "#020024"); grd.addColorStop(1, "#0f172a");
+        ctx.fillStyle = grd; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Stars
+        ctx.fillStyle = "white";
+        simData.stars.forEach(s => {
+            s.size += s.blink; if(s.size > 2.5 || s.size < 0.5) s.blink = -s.blink;
+            ctx.globalAlpha = Math.random() * 0.5 + 0.5;
+            ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI*2); ctx.fill();
+        });
+        ctx.globalAlpha = 1.0;
+
+        // --- Mission 1 (Atmosphere) ---
+        if (state === 'M1' || state === 'M1_SUCCESS' || state === 'M1_INTRO') {
+            let cx = canvas.width / 2;
+            let earthY = canvas.height + 100;
+            let atmY = canvas.height * 0.4;
+            
+            // Earth
+            ctx.fillStyle = "#0369a1"; ctx.beginPath(); ctx.arc(cx, earthY, 300, 0, Math.PI*2); ctx.fill();
+            // Atmosphere
+            let atmGrd = ctx.createRadialGradient(cx, earthY, 300, cx, earthY, 300 + (canvas.height*0.5));
+            atmGrd.addColorStop(0, "rgba(56, 189, 248, 0.6)"); atmGrd.addColorStop(1, "rgba(56, 189, 248, 0)");
+            ctx.fillStyle = atmGrd; ctx.beginPath(); ctx.arc(cx, earthY, 300 + (canvas.height*0.5), 0, Math.PI*2); ctx.fill();
+
+            // UV Rays
+            ctx.strokeStyle = "rgba(139, 92, 246, 0.6)"; ctx.lineWidth = 3; ctx.setLineDash([10, 15]);
+            for(let i=0; i<5; i++) {
+                let rx = cx - 200 + i*100;
+                ctx.beginPath(); ctx.moveTo(rx, 0); ctx.lineTo(rx, atmY); ctx.stroke();
+                // Blocked waves
+                ctx.beginPath(); ctx.arc(rx, atmY, 20, Math.PI, 0); ctx.stroke();
+            }
+            ctx.setLineDash([]);
+
+            let satY = (canvas.height * 0.8) - (simData.altitude / 100) * (canvas.height * 0.7);
+            drawSatellite(cx, satY, 0.8);
+
+            if (state === 'M1') {
+                if (satY < atmY - 20) {
+                    ui.progBar.style.width = '100%';
+                    setTimeout(() => { if(state === 'M1') setState('M1_SUCCESS'); }, 500);
+                } else ui.progBar.style.width = (simData.altitude) + '%';
+            }
+        }
+
+        // --- Mission 2 (FOV) ---
+        else if (state === 'M2' || state === 'M2_SUCCESS' || state === 'M2_INTRO') {
+            let cx = canvas.width / 2;
+            let satY = canvas.height - 80;
+            drawSatellite(cx, satY, 1.0, simData.fov);
+
+            if (state === 'M2') {
+                for(let i=simData.explosions.length-1; i>=0; i--) {
+                    let ex = simData.explosions[i];
+                    ex.life -= 0.01;
+                    
+                    // Check intersection with FOV cone
+                    let dx = ex.x - cx; let dy = satY - ex.y;
+                    let angle = Math.atan2(Math.abs(dx), dy) * 180 / Math.PI;
+                    
+                    if (!ex.caught && angle <= simData.fov && dy > 0 && ex.life > 0.5) {
+                        ex.caught = true; simData.captured++;
+                        audio.success();
+                        spawnExplosion(ex.x, ex.y, "#38bdf8", 20); // caught explosion effect
+                    }
+
+                    if (ex.life > 0 && !ex.caught) {
+                        ctx.fillStyle = `rgba(245, 158, 11, ${ex.life})`;
+                        ctx.beginPath(); ctx.arc(ex.x, ex.y, 15 + Math.sin(Date.now()/50)*5, 0, Math.PI*2); ctx.fill();
+                    }
+                    if(ex.life <= 0 || ex.caught) simData.explosions.splice(i, 1);
+                }
+
+                let prog = (simData.captured / 3) * 100;
+                ui.progBar.style.width = prog + '%';
+                if(prog >= 100) setTimeout(() => { if(state === 'M2') setState('M2_SUCCESS'); }, 500);
+            }
+        }
+
+        // --- Mission 3 (Shock Breakout) ---
+        else if (state.startsWith('M3')) {
+            let cx = canvas.width / 2; let cy = canvas.height * 0.4;
+            simData.starTimer += 16; // approx ms per frame
+
+            let r = 80; let color = "#ef4444"; let glow = "#f87171";
+            
+            if (state === 'M3') {
+                if (simData.starTimer < 4000) {
+                    simData.starState = 'NORMAL';
+                    r = 80 + Math.sin(simData.starTimer/200)*10;
+                } else if (simData.starTimer >= 4000 && simData.starTimer < 4800) {
+                    simData.starState = 'BREAKOUT';
+                    r = 60; // contracts before boom
+                    color = "#e0f2fe"; glow = "#38bdf8"; // UV / Blue flash
+                    // Screen shake
+                    cx += (Math.random()-0.5)*10; cy += (Math.random()-0.5)*10;
+                } else {
+                    simData.starState = 'SUPERNOVA';
+                    r = Math.min(canvas.width, (simData.starTimer - 4800) * 0.5 + 100);
+                    color = "#b91c1c"; glow = "#ef4444";
+                    if(simData.starTimer > 8000) setState('M3_FAIL');
+                }
+            } else if (state === 'M3_SUCCESS') { r = 0; } // Hidden, replaced by particles
+
+            if (r > 0) {
+                let sGrd = ctx.createRadialGradient(cx, cy, r*0.2, cx, cy, r*1.5);
+                sGrd.addColorStop(0, "white"); sGrd.addColorStop(0.2, color); sGrd.addColorStop(1, "transparent");
+                ctx.fillStyle = sGrd; ctx.beginPath(); ctx.arc(cx, cy, r*2, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(cx, cy, r*0.1, 0, Math.PI*2); ctx.fill();
+            }
+
+            drawSatellite(cx, canvas.height - 80, 0.8, 30);
+        }
+
+        drawParticles();
+        requestAnimationFrame(loop);
+    }
+
+    // Init
+    resize();
+    setState('WELCOME');
+    requestAnimationFrame(loop);
+
+</script>
+</body>
+</html>
